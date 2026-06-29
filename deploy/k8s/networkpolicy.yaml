@@ -1,0 +1,19 @@
+# Default-deny; only the ingress controller reaches web/api, only api/worker reach db.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny, namespace: risk-register }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: db-access, namespace: risk-register }
+spec:
+  podSelector: { matchLabels: { app: db } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: api } }
+        - podSelector: { matchLabels: { app: worker } }
+      ports: [{ protocol: TCP, port: 5432 }]

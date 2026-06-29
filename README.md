@@ -1,0 +1,63 @@
+# Enterprise Risk Register Platform — Biltema · Birgma
+
+A containerized GRC risk-register platform built **secure-by-design** and **clean-by-design**.
+This repository is the buildable companion to the interactive UI prototype and the
+Architecture & Security specification.
+
+## Stack
+
+| Tier      | Technology                                   |
+|-----------|----------------------------------------------|
+| Web (SPA) | React 18 + Vite + MSAL (Entra ID SSO)        |
+| API       | Node 20 + TypeScript + Express (clean arch)  |
+| Worker    | Node 20 + TypeScript (MS Graph mail)         |
+| Data      | PostgreSQL 16                                |
+| Edge      | NGINX reverse proxy, TLS 1.2/1.3 termination |
+
+## Layout
+
+\`\`\`
+platform/
+├─ apps/
+│  ├─ web/         React SPA (presentation only — no secrets)
+│  ├─ api/         Stateless API: domain / application / infrastructure / interface
+│  └─ worker/      Queue consumer — Graph email + review reminders
+├─ packages/
+│  └─ frameworks-data/   Control catalogue (ISO 27001, NIST, GDPR, NIS2, …)
+├─ db/migrations/  SQL schema
+├─ deploy/
+│  ├─ nginx/       TLS reverse proxy config
+│  ├─ scripts/     Dev certificate generation
+│  └─ k8s/         Kubernetes manifests (prod topology)
+├─ docker-compose.yml      Local dev — one command up
+└─ .github/workflows/      CI: install → lint → test → build → scan
+\`\`\`
+
+## Quick start (local, containerized)
+
+\`\`\`bash
+cp .env.example .env                 # fill in Entra + Graph values
+./deploy/scripts/gen-certs.sh        # self-signed dev TLS cert
+docker compose up --build            # web, api, worker, db, nginx
+# open https://localhost  (accept the dev certificate)
+\`\`\`
+
+The API is reachable only through the NGINX edge over HTTPS. Nothing else is
+published to the host. See **deploy/k8s** for the production topology
+(default-deny NetworkPolicy, non-root images, secrets from a vault).
+
+## Configuration
+
+All configuration is via environment variables — see `.env.example`. **No secrets
+are committed.** In production these come from Azure Key Vault / a KMS via workload
+identity, never from `.env` files or images.
+
+## Security highlights
+
+- **SSO only** — OIDC against Microsoft Entra ID (Auth Code + PKCE in the SPA). No local accounts.
+- **RBAC on signed claims** — the API authorizes every request against the `roles` claim. The UI only hides; the API enforces.
+- **TLS 1.2/1.3** at the edge, HSTS, modern ciphers; internal hops can be mTLS.
+- **Auditable** — every create/modify/approve/notify is appended to an immutable audit trail.
+- **Notifications** — risk assignment & material updates email owner + stakeholders via MS Graph `sendMail`.
+
+See `../Architecture & Security.dc.html` for the full design rationale.
