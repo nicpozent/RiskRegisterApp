@@ -137,13 +137,40 @@ npm audit --omit=dev --audit-level=high               # 0 prod vulnerabilities
 New tests: `risk.schemas.test.ts` (asserts the C1 accept-bypass is blocked) and
 `rbac.test.ts` (deny-by-default, empty-roles denial).
 
-## Known follow-ups (not in this change)
+## Follow-ups — now implemented
 
-- **Object-level authorization (H5 cont.):** enforce that `RiskOwner`/`Contributor`
-  may modify only risks they own/are stakeholders of — requires resolving the
-  principal `oid` to an `app_user` row in the request path.
-- **Control catalogue data:** `seed.ts` references `catalogue.seed.json`
-  (the full ISO/NIST/regional control set), which is not in the repo. The
-  framework registry seeds; the control rows need that data file.
-- **Remaining dev-only advisories:** vite/vitest/esbuild (build-time only, not
-  shipped in runtime images). Upgrade when convenient.
+- **Object-level authorization (H5 cont.) — ✅ done.** `RiskService` resolves the
+  principal `oid` to an `app_user` id and enforces `canModifyRisk` (a pure domain
+  rule): Admin/CISO may modify any risk; others only risks they own or are a
+  stakeholder of. Denials raise a typed `HttpError(403)` mapped by the error
+  middleware. New unit tests in `domain/roles.test.ts`.
+  *Files:* `apps/api/src/domain/roles.ts`, `application/risk.service.ts`,
+  `application/errors.ts`, `infrastructure/risk.repository.ts` (`userIdByOid`),
+  `interface/middleware/rbac.ts`, `interface/http.ts`, `routes/risks.ts`.
+- **Control catalogue data — ✅ done.** Added a typed starter catalogue to
+  `@rr/frameworks-data` (`catalogue.ts`): ISO/IEC 27001:2022 Annex A (all 93),
+  CIS Controls v8 (18), and NIST CSF 2.0 (6 functions) — 117 controls, no
+  duplicates. `seed.ts` now upserts both frameworks and controls idempotently.
+  *Files:* `packages/frameworks-data/src/catalogue.ts`, `…/src/index.ts`,
+  `apps/api/src/infrastructure/seed.ts`.
+
+## Architecture documentation
+
+- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) — deep architecture explanation with
+  diagrams and code samples.
+- [`docs/adr/`](adr/README.md) — 15 Architecture Decision Records with trade-offs
+  and alternatives for each tech-stack decision.
+- [`docs/architecture-building-blocks.md`](architecture-building-blocks.md) —
+  TOGAF-style Architecture Building Blocks derived from the project, with the
+  ABB → SBB mapping.
+
+## Remaining follow-ups (not in this change)
+
+- **JIT user provisioning:** principals must exist in `app_user` (Entra-synced)
+  for ownership/notification resolution; provision on first token presentation.
+- **Audit/business write atomicity:** wrap the business write and its audit row
+  in a single transaction.
+- **Event bus:** replace the DB-polling outbox with a broker when throughput
+  demands (the `events.ts` producer is the seam).
+- **Dev-only advisories:** vite/vitest/esbuild (build-time only, not shipped in
+  runtime images). Upgrade when convenient.

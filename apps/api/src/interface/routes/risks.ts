@@ -29,19 +29,20 @@ risks.post('/', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
 risks.patch('/:id', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const updated = await svc.update(req.params.id, parsed.data, req.user!.oid);
+  const updated = await svc.update(req.params.id, parsed.data, req.user!);
   if (!updated) return res.status(404).json({ error: 'not found' });
   res.json(updated);
 }));
 
 // Only CISO / Admin may accept residual risk.
 risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(async (req, res) => {
-  const accepted = await svc.accept(req.params.id, req.user!.oid);
+  const accepted = await svc.accept(req.params.id, req.user!);
   if (!accepted) return res.status(404).json({ error: 'not found' });
   res.json(accepted);
 }));
 
 risks.post('/:id/controls/:controlId', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
-  await svc.mapControl(req.params.id, req.params.controlId, req.user!.oid);
+  const ok = await svc.mapControl(req.params.id, req.params.controlId, req.user!);
+  if (!ok) return res.status(404).json({ error: 'not found' });
   res.status(204).end();
 }));

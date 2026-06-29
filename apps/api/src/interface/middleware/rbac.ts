@@ -1,13 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
+import { Roles, AnyRole } from '../../domain/roles.js';
 
-// App roles, mirrored from Entra App Roles / security groups.
-export const Roles = {
-  Admin: 'Administrator', Ciso: 'CISO.RiskManager', RiskOwner: 'RiskOwner',
-  ControlOwner: 'ControlOwner', Auditor: 'Auditor', Contributor: 'Contributor', Viewer: 'Viewer',
-} as const;
-
-/** Every recognized role — used to gate read access to authenticated principals. */
-export const AnyRole = Object.values(Roles);
+// Re-export so route modules keep importing role helpers from one place.
+export { Roles, AnyRole };
 
 /** Deny-by-default: allow only if the principal holds one of the required roles. */
 export function requireRole(...allowed: string[]) {

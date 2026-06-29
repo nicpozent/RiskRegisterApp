@@ -51,6 +51,11 @@ export class RiskRepository {
     await this.db.query(`UPDATE risk SET ${sets.join(',')}, updated_at=now() WHERE id=$${vals.length}`, vals);
     return this.findById(id);
   }
+  /** Resolve an Entra object id to the internal app_user id (null if unknown). */
+  async userIdByOid(oid: string): Promise<string | null> {
+    const { rows } = await this.db.query('SELECT id FROM app_user WHERE entra_oid=$1', [oid]);
+    return rows[0]?.id ?? null;
+  }
   async linkControl(riskId: string, controlId: string) {
     await this.db.query(
       `INSERT INTO risk_control (risk_id, control_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,

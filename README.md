@@ -64,8 +64,17 @@ npm run build -w @rr/frameworks-data && npm run build -w @rr/api
 \`\`\`
 
 CI (`.github/workflows/ci.yml`) runs install → lint → test → build → audit on every
-push and PR. A review of this codebase and the fixes applied are tracked in
-[`docs/REMEDIATION.md`](docs/REMEDIATION.md).
+push and PR.
+
+## Documentation
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the system is architected
+  (clean architecture, security model, data flow) with diagrams and code samples.
+- [`docs/adr/`](docs/adr/README.md) — Architecture Decision Records: the trade-offs
+  behind each tech-stack decision.
+- [`docs/architecture-building-blocks.md`](docs/architecture-building-blocks.md) —
+  reusable Architecture Building Blocks (ABB → SBB mapping).
+- [`docs/REMEDIATION.md`](docs/REMEDIATION.md) — code-review findings and fixes.
 
 ## Security highlights
 
