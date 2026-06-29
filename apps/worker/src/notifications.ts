@@ -7,11 +7,30 @@ const SUBJECTS: Record<string,string> = {
   'risk.accepted': 'Residual risk accepted',
 };
 
-/** Resolve owner + stakeholder emails (from Entra-synced app_user) and send. */
+const BATCH = 25;
+const MAX_ATTEMPTS = 5;
+
+/**
+ * Resolve owner + stakeholder emails (from Entra-synced app_user) and send.
+ *
+ * Rows are claimed atomically with FOR UPDATE SKIP LOCKED so multiple worker
+ * replicas never process — and therefore never double-send — the same
+ * notification. Failures are retried up to MAX_ATTEMPTS, then parked as
+ * 'failed' with the last error recorded for triage.
+ */
 export async function processQueue(db: Pool) {
-  const { rows } = await db.query(
-    `SELECT id, risk_id, type FROM notification WHERE status='queued' ORDER BY created_at LIMIT 25`);
-  for (const n of rows) {
+  const { rows: claimed } = await db.query(
+    `UPDATE notification
+        SET status = 'sending', attempts = attempts + 1
+      WHERE id IN (
+        SELECT id FROM notification
+         WHERE status = 'queued'
+         ORDER BY created_at
+         LIMIT ${BATCH}
+         FOR UPDATE SKIP LOCKED)
+      RETURNING id, risk_id, type, attempts`);
+
+  for (const n of claimed) {
     try {
       const { rows: people } = await db.query(
         `SELECT u.email FROM app_user u
@@ -19,7 +38,7 @@ export async function processQueue(db: Pool) {
               OR u.id IN (SELECT user_id FROM risk_stakeholder WHERE risk_id=$1)`, [n.risk_id]);
       const { rows: r } = await db.query('SELECT ref, title FROM risk WHERE id=$1', [n.risk_id]);
       const risk = r[0]; const to = people.map(p => p.email);
-      if (to.length) {
+      if (risk && to.length) {
         await sendMail({
           subject: `[${risk.ref}] ${SUBJECTS[n.type] ?? 'Risk update'}: ${risk.title}`,
           html: `<p>${SUBJECTS[n.type] ?? 'A risk was updated'}.</p>
@@ -28,10 +47,18 @@ export async function processQueue(db: Pool) {
           to,
         });
       }
-      await db.query(`UPDATE notification SET status='sent', recipients=$2, sent_at=now() WHERE id=$1`,
+      await db.query(
+        `UPDATE notification SET status='sent', recipients=$2, sent_at=now() WHERE id=$1`,
         [n.id, JSON.stringify(to)]);
     } catch (e) {
-      await db.query(`UPDATE notification SET status='failed' WHERE id=$1`, [n.id]);
+      const msg = e instanceof Error ? e.message : String(e);
+      const giveUp = n.attempts >= MAX_ATTEMPTS;
+      // Retry by returning to 'queued' until attempts are exhausted.
+      await db.query(
+        `UPDATE notification SET status=$2, last_error=$3 WHERE id=$1`,
+        [n.id, giveUp ? 'failed' : 'queued', msg]);
+      // eslint-disable-next-line no-console
+      console.error(`notification ${n.id} attempt ${n.attempts} failed${giveUp ? ' (giving up)' : ''}:`, msg);
     }
   }
 }

@@ -57,7 +57,8 @@ export class RiskRepository {
       [riskId, controlId]);
   }
   private async nextRef(): Promise<string> {
-    const { rows } = await this.db.query(`SELECT count(*)::int n FROM risk`);
-    return 'RR-' + String(rows[0].n + 1).padStart(3, '0');
+    // Atomic — no race or reuse under concurrent inserts (see migration 0002).
+    const { rows } = await this.db.query(`SELECT nextval('risk_ref_seq')::int n`);
+    return 'RR-' + String(rows[0].n).padStart(3, '0');
   }
 }

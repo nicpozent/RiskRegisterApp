@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: install → lint → test → build → scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # Reproducible install from the committed lockfile.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: |
+          npm run lint -w @rr/api
+          npm run lint -w @rr/web
+
+      - name: Test
+        run: npm test -w @rr/api
+
+      - name: Build
+        run: |
+          npm run build -w @rr/frameworks-data
+          npm run build -w @rr/api
+          npm run build -w @rr/web
+
+      # Dependency vulnerability scan. Runtime images ship production deps only,
+      # so gate the build on prod-dependency advisories (high+).
+      - name: Audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high

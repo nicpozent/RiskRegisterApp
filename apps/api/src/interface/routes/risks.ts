@@ -1,46 +1,47 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { pool } from '../../infrastructure/db.js';
 import { RiskService } from '../../application/risk.service.js';
-import { requireRole, Roles } from '../middleware/rbac.js';
+import { requireRole, Roles, AnyRole } from '../middleware/rbac.js';
+import { asyncHandler } from '../async-handler.js';
+import { createSchema, updateSchema } from './risk.schemas.js';
 
 const svc = new RiskService(pool);
 export const risks = Router();
 
-risks.get('/', async (_req, res) => res.json(await svc.list()));
-risks.get('/:id', async (req, res) => {
+// Reads require *some* recognized role (deny tokens with an empty roles claim).
+risks.get('/', requireRole(...AnyRole), asyncHandler(async (_req, res) => {
+  res.json(await svc.list());
+}));
+risks.get('/:id', requireRole(...AnyRole), asyncHandler(async (req, res) => {
   const r = await svc.get(req.params.id);
-  r ? res.json(r) : res.status(404).json({ error: 'not found' });
-});
+  if (!r) return res.status(404).json({ error: 'not found' });
+  res.json(r);
+}));
 
-const createSchema = z.object({
-  title: z.string().min(3), description: z.string().optional(), category: z.string().optional(),
-  ownerId: z.string().uuid().optional(),
-  inherentL: z.number().int().min(1).max(5), inherentI: z.number().int().min(1).max(5),
-  residualL: z.number().int().min(1).max(5), residualI: z.number().int().min(1).max(5),
-  treatment: z.enum(['Mitigate','Transfer','Avoid','Accept']),
-  status: z.enum(['open','assessed','treating','monitored','accepted','closed']).default('open'),
-  sle: z.number().optional(), aro: z.number().optional(), residualAro: z.number().optional(),
-  nextReview: z.string().optional(), controlIds: z.array(z.string().uuid()).default([]),
-  stakeholderIds: z.array(z.string().uuid()).default([]),
-});
+const WRITE_ROLES = [Roles.Admin, Roles.Ciso, Roles.RiskOwner, Roles.Contributor] as const;
 
-risks.post('/', requireRole(Roles.Admin, Roles.Ciso, Roles.RiskOwner, Roles.Contributor), async (req, res) => {
+risks.post('/', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  res.status(201).json(await svc.create(parsed.data as any, req.user!.oid));
-});
+  res.status(201).json(await svc.create(parsed.data, req.user!.oid));
+}));
 
-risks.patch('/:id', requireRole(Roles.Admin, Roles.Ciso, Roles.RiskOwner, Roles.Contributor), async (req, res) => {
-  res.json(await svc.update(req.params.id, req.body, req.user!.oid));
-});
+risks.patch('/:id', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const updated = await svc.update(req.params.id, parsed.data, req.user!.oid);
+  if (!updated) return res.status(404).json({ error: 'not found' });
+  res.json(updated);
+}));
 
 // Only CISO / Admin may accept residual risk.
-risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), async (req, res) => {
-  res.json(await svc.update(req.params.id, { status: 'accepted' }, req.user!.oid));
-});
+risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(async (req, res) => {
+  const accepted = await svc.accept(req.params.id, req.user!.oid);
+  if (!accepted) return res.status(404).json({ error: 'not found' });
+  res.json(accepted);
+}));
 
-risks.post('/:id/controls/:controlId', requireRole(Roles.Admin, Roles.Ciso, Roles.RiskOwner, Roles.Contributor), async (req, res) => {
+risks.post('/:id/controls/:controlId', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
   await svc.mapControl(req.params.id, req.params.controlId, req.user!.oid);
   res.status(204).end();
-});
+}));

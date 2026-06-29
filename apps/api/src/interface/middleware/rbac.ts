@@ -6,6 +6,9 @@ export const Roles = {
   ControlOwner: 'ControlOwner', Auditor: 'Auditor', Contributor: 'Contributor', Viewer: 'Viewer',
 } as const;
 
+/** Every recognized role — used to gate read access to authenticated principals. */
+export const AnyRole = Object.values(Roles);
+
 /** Deny-by-default: allow only if the principal holds one of the required roles. */
 export function requireRole(...allowed: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {

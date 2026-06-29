@@ -4,6 +4,20 @@
   "private": true,
   "description": "Control framework & regulation catalogue (ISO 27001, NIST, GDPR, NIS2, …)",
   "type": "module",
-  "main": "src/index.js",
-  "types": "src/index.ts"
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
 }

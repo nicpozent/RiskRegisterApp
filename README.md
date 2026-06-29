@@ -52,6 +52,21 @@ All configuration is via environment variables — see `.env.example`. **No secr
 are committed.** In production these come from Azure Key Vault / a KMS via workload
 identity, never from `.env` files or images.
 
+Set `DATABASE_SSL=true` only when the database endpoint terminates TLS (managed
+Postgres); the local docker-compose database does not serve TLS, so it defaults off.
+
+## Testing & CI
+
+\`\`\`bash
+npm ci                         # reproducible install from the lockfile
+npm test    -w @rr/api         # domain unit tests (vitest)
+npm run build -w @rr/frameworks-data && npm run build -w @rr/api
+\`\`\`
+
+CI (`.github/workflows/ci.yml`) runs install → lint → test → build → audit on every
+push and PR. A review of this codebase and the fixes applied are tracked in
+[`docs/REMEDIATION.md`](docs/REMEDIATION.md).
+
 ## Security highlights
 
 - **SSO only** — OIDC against Microsoft Entra ID (Auth Code + PKCE in the SPA). No local accounts.

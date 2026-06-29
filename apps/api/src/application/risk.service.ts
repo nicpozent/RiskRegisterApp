@@ -20,9 +20,20 @@ export class RiskService {
 
   async update(id: string, patch: Partial<Risk>, actorOid: string) {
     const before = await this.repo.findById(id);
+    if (!before) return null;
     const after  = await this.repo.update(id, patch);
     await audit(this.db, actorOid, 'modified', 'risk', id, before, after);
     await emit(this.db, { type: 'risk.updated', riskId: id, actorOid, summary: Object.keys(patch).join(', ') });
+    return after ? toView(after) : null;
+  }
+
+  /** Formal residual-risk acceptance (CISO/Admin) — distinct audit + event. */
+  async accept(id: string, actorOid: string) {
+    const before = await this.repo.findById(id);
+    if (!before) return null;
+    const after = await this.repo.update(id, { status: 'accepted' });
+    await audit(this.db, actorOid, 'approved', 'risk', id, before, after);
+    await emit(this.db, { type: 'risk.accepted', riskId: id, actorOid });
     return after ? toView(after) : null;
   }
 

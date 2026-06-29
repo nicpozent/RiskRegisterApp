@@ -12,7 +12,6 @@ async function main() {
          ON CONFLICT (id) DO UPDATE SET name=excluded.name, description=excluded.description`,
       [f.id, f.name, f.authority, f.region, f.kind, f.description]);
   }
-  // eslint-disable-next-line no-console
   console.log(`Seeded ${FRAMEWORKS.length} frameworks. Load controls from catalogue.seed.json next.`);
   await pool.end();
 }

@@ -4,6 +4,9 @@ const schema = z.object({
   NODE_ENV: z.string().default('development'),
   API_PORT: z.coerce.number().default(8080),
   DATABASE_URL: z.string(),
+  // Enable client TLS only when the DB endpoint actually serves it (managed
+  // Postgres). The local docker-compose db does not, so this defaults off.
+  DATABASE_SSL: z.string().default('false').transform(v => v === 'true' || v === '1'),
   CORS_ORIGIN: z.string().default('https://localhost'),
   ENTRA_TENANT_ID: z.string(),
   ENTRA_API_AUDIENCE: z.string(),
