@@ -179,6 +179,12 @@ New tests: `risk.schemas.test.ts` (asserts the C1 accept-bypass is blocked) and
   exists on a fresh checkout. Verified: cert generation produces a valid X.509.
 - **Layered test suite + diagnostics** added — see `docs/TESTING.md`,
   `scripts/test/`, and `scripts/diagnose/`.
+- **Docker build fix (smoke job).** `npm ci --ignore-scripts` was still firing
+  `@rr/frameworks-data`'s `prepare` script during the image build, where neither
+  `tsconfig.json` nor `src/` is present yet (only `package.json` files are copied
+  for layer caching), failing with `TS5058`. Removed the `prepare` hook — the
+  package is built explicitly in every Dockerfile, in `integration.sh`, and in a
+  new "Build shared package" CI step — so install no longer triggers a build.
 
 ## Remaining follow-ups (not in this change)
 

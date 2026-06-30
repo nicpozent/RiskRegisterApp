@@ -29,6 +29,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Build the shared workspace package up front so its dist/ is available to
+      # every later step (it is no longer auto-built via a 'prepare' hook).
+      - name: Build shared package
+        run: npm run build -w @rr/frameworks-data
+
       - name: Lint
         run: |
           npm run lint -w @rr/api
