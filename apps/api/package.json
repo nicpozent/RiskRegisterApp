@@ -9,7 +9,10 @@
     "start": "node dist/index.js",
     "seed": "tsx src/infrastructure/seed.ts",
     "lint": "eslint src",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:int": "vitest run --config vitest.integration.config.ts",
+    "test:regression": "vitest run -t regression"
   },
   "dependencies": {
     "@azure/identity": "^4.4.1",

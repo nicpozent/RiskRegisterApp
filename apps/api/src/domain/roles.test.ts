@@ -23,7 +23,7 @@ describe('canModifyRisk (object-level authz)', () => {
   it('lets a stakeholder modify the risk', () => {
     expect(canModifyRisk([Roles.Contributor], 'user-stake', risk)).toBe(true);
   });
-  it('denies a non-owner / non-stakeholder', () => {
+  it('regression(H5): denies a non-owner / non-stakeholder', () => {
     expect(canModifyRisk([Roles.Contributor], 'user-other', risk)).toBe(false);
   });
   it('denies when the actor cannot be resolved to a user', () => {

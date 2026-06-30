@@ -450,4 +450,51 @@ scalable stateless API and (now-safe) worker.
   regulations are registered and extended over time.
 
 These are deliberate, documented trade-offs — see the [ADRs](adr/README.md).
+
+---
+
+## 11. Capabilities (ABBs) → implementation (SBBs)
+
+The platform is an assembly of reusable **capabilities**. Each is captured as an
+**Architecture Building Block (ABB)** — *what* is required, technology-agnostic —
+and realized by a **Solution Building Block (SBB)** — *how* this codebase
+implements it. The full catalogue (one directory per ABB, each with its SBB)
+lives in [`building-blocks/`](../building-blocks/README.md); the narrative
+derivation is in
+[`architecture-building-blocks.md`](architecture-building-blocks.md).
+
+This table is the quick index of the capabilities this application needs and
+where each is implemented:
+
+| Capability (ABB) | Implementation (SBB) | Key source |
+|------------------|----------------------|------------|
+| [Risk Management](../building-blocks/ABB-B1-Risk-Management/ABB.md) | [SBB-B1](../building-blocks/ABB-B1-Risk-Management/SBB/SBB.md) | `domain/scoring.ts`, `application/risk.service.ts` |
+| [Control & Framework Catalogue](../building-blocks/ABB-B2-Control-and-Framework-Catalogue/ABB.md) | [SBB-B2](../building-blocks/ABB-B2-Control-and-Framework-Catalogue/SBB/SBB.md) | `packages/frameworks-data`, `routes/controls.ts` |
+| [Compliance / Audit Evidence](../building-blocks/ABB-B3-Compliance-Audit-Evidence/ABB.md) | [SBB-B3](../building-blocks/ABB-B3-Compliance-Audit-Evidence/SBB/SBB.md) | `infrastructure/audit.ts`, `audit_event` |
+| [Stakeholder Notification](../building-blocks/ABB-B4-Stakeholder-Notification/ABB.md) | [SBB-B4](../building-blocks/ABB-B4-Stakeholder-Notification/SBB/SBB.md) | `application/events.ts`, `apps/worker` |
+| [Identity & Authentication](../building-blocks/ABB-A1-Identity-and-Authentication/ABB.md) | [SBB-A1](../building-blocks/ABB-A1-Identity-and-Authentication/SBB/SBB.md) | `auth/entra.ts`, `authConfig.ts` |
+| [Authorization (PEP/PDP)](../building-blocks/ABB-A2-Authorization-PEP-PDP/ABB.md) | [SBB-A2](../building-blocks/ABB-A2-Authorization-PEP-PDP/SBB/SBB.md) | `middleware/rbac.ts`, `domain/roles.ts` |
+| [Domain Service / Use-Case](../building-blocks/ABB-A3-Domain-Service-Use-Case/ABB.md) | [SBB-A3](../building-blocks/ABB-A3-Domain-Service-Use-Case/SBB/SBB.md) | `application/risk.service.ts` |
+| [Boundary Validation](../building-blocks/ABB-A4-Boundary-Validation/ABB.md) | [SBB-A4](../building-blocks/ABB-A4-Boundary-Validation/SBB/SBB.md) | `routes/*.schemas.ts`, `config/env.ts` |
+| [Edge Gateway](../building-blocks/ABB-A5-Edge-Gateway/ABB.md) | [SBB-A5](../building-blocks/ABB-A5-Edge-Gateway/SBB/SBB.md) | `deploy/nginx`, `deploy/k8s/ingress.yaml` |
+| [Eventing / Messaging](../building-blocks/ABB-A6-Eventing-Messaging/ABB.md) | [SBB-A6](../building-blocks/ABB-A6-Eventing-Messaging/SBB/SBB.md) | `application/events.ts` |
+| [Background Processing](../building-blocks/ABB-A7-Background-Processing/ABB.md) | [SBB-A7](../building-blocks/ABB-A7-Background-Processing/SBB/SBB.md) | `apps/worker/notifications.ts` |
+| [Observability](../building-blocks/ABB-A8-Observability/ABB.md) | [SBB-A8](../building-blocks/ABB-A8-Observability/SBB/SBB.md) | `interface/http.ts` |
+| [System of Record](../building-blocks/ABB-D1-System-of-Record/ABB.md) | [SBB-D1](../building-blocks/ABB-D1-System-of-Record/SBB/SBB.md) | PostgreSQL, `db/migrations`, repositories |
+| [Immutable Audit Store](../building-blocks/ABB-D2-Immutable-Audit-Store/ABB.md) | [SBB-D2](../building-blocks/ABB-D2-Immutable-Audit-Store/SBB/SBB.md) | `audit_event` (INSERT-only) |
+| [Transactional Outbox](../building-blocks/ABB-D3-Transactional-Outbox/ABB.md) | [SBB-D3](../building-blocks/ABB-D3-Transactional-Outbox/SBB/SBB.md) | `notification` table |
+| [Reference Data](../building-blocks/ABB-D4-Reference-Data/ABB.md) | [SBB-D4](../building-blocks/ABB-D4-Reference-Data/SBB/SBB.md) | `packages/frameworks-data`, `seed.ts` |
+| [Container Runtime](../building-blocks/ABB-T1-Container-Runtime/ABB.md) | [SBB-T1](../building-blocks/ABB-T1-Container-Runtime/SBB/SBB.md) | `apps/*/Dockerfile` |
+| [Orchestration & Scaling](../building-blocks/ABB-T2-Orchestration-and-Scaling/ABB.md) | [SBB-T2](../building-blocks/ABB-T2-Orchestration-and-Scaling/SBB/SBB.md) | `deploy/k8s/*` |
+| [Secrets Management](../building-blocks/ABB-T3-Secrets-Management/ABB.md) | [SBB-T3](../building-blocks/ABB-T3-Secrets-Management/SBB/SBB.md) | vault/CSI, `secrets.example.yaml` |
+| [Network Segmentation](../building-blocks/ABB-T4-Network-Segmentation/ABB.md) | [SBB-T4](../building-blocks/ABB-T4-Network-Segmentation/SBB/SBB.md) | `networkpolicy.yaml` |
+| [TLS / PKI](../building-blocks/ABB-T5-TLS-PKI/ABB.md) | [SBB-T5](../building-blocks/ABB-T5-TLS-PKI/SBB/SBB.md) | NGINX/Ingress, cert-manager |
+| [CI/CD & Supply Chain](../building-blocks/ABB-T6-CICD-and-Supply-Chain/ABB.md) | [SBB-T6](../building-blocks/ABB-T6-CICD-and-Supply-Chain/SBB/SBB.md) | `.github/workflows/ci.yml` |
+
+> **Is this overkill?** For a single service it would be — but this platform is
+> explicitly positioned as a *reference* implementation. Keeping the capability
+> list (ABBs) beside their implementations (SBBs) lets architects reuse the
+> *what* without copying the *how*, and lets reviewers check that every required
+> capability is actually realized. The catalogue is generated and linked, not
+> duplicated, so the maintenance cost stays low.
 ```

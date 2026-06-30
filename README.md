@@ -74,7 +74,20 @@ push and PR.
   behind each tech-stack decision.
 - [`docs/architecture-building-blocks.md`](docs/architecture-building-blocks.md) —
   reusable Architecture Building Blocks (ABB → SBB mapping).
+- [`building-blocks/`](building-blocks/README.md) — the ABB/SBB catalogue (one
+  directory per ABB, each with its Solution Building Block).
+- [`docs/TESTING.md`](docs/TESTING.md) — layered testing plan; runners in
+  [`scripts/test/`](scripts/test).
+- [`scripts/diagnose/`](scripts/diagnose/README.md) — modular troubleshooting
+  ("doctor") scripts that pinpoint the failing layer.
 - [`docs/REMEDIATION.md`](docs/REMEDIATION.md) — code-review findings and fixes.
+
+## Testing & troubleshooting
+
+\`\`\`bash
+bash scripts/test/all.sh          # lint + unit + integration + regression + smoke
+bash scripts/diagnose/doctor.sh   # pinpoint where a running deployment is broken
+\`\`\`
 
 ## Security highlights
 

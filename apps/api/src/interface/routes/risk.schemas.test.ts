@@ -19,7 +19,7 @@ describe('risk schemas', () => {
   });
 
   // Core C1 guard: acceptance must not be reachable through a generic PATCH.
-  it('updateSchema rejects status="accepted"', () => {
+  it('regression(C1): updateSchema rejects status="accepted"', () => {
     expect(updateSchema.safeParse({ status: 'accepted' }).success).toBe(false);
   });
 
