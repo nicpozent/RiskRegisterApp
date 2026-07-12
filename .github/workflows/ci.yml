@@ -87,3 +87,39 @@ jobs:
       # contract: /api/healthz 200, /api/risks 401, / 200.
       - name: Smoke tests
         run: bash scripts/test/smoke.sh
+
+  manifests:
+    name: validate k8s manifests (kubeconform)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gate: every manifest must be schema-valid. -ignore-missing-schemas lets
+      # CRD-only fields (e.g. cert-manager annotations) pass; core kinds are
+      # still strictly validated.
+      - name: kubeconform
+        run: |
+          docker run --rm -v "$PWD:/work" ghcr.io/yannh/kubeconform:latest \
+            -strict -summary -ignore-missing-schemas -verbose /work/deploy/k8s
+
+  security:
+    name: supply-chain scan (trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gate: no committed secrets. This is precise and should stay green.
+      - name: Trivy secret scan (gating)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
+            --scanners secret --exit-code 1 --severity HIGH,CRITICAL --no-progress /src
+
+      # Report-only: IaC/Dockerfile misconfigurations. Surfaced in the log for
+      # triage; not gating yet to avoid churn on best-practice nits. Promote to
+      # --exit-code 1 once the backlog is clean.
+      - name: Trivy IaC misconfig scan (report-only)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:latest config \
+            --exit-code 0 --severity HIGH,CRITICAL --no-progress /src

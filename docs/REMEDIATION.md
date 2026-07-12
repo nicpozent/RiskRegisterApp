@@ -208,6 +208,21 @@ Addressing gaps where the implementation trailed the documented design:
   Graph mocked): recipient resolution + mark-sent, and the H3 retry/last_error
   path — the worker's real logic, against a real database.
 
+## CI / supply-chain hardening (later round)
+
+- **k8s manifest validation** — a `manifests` CI job runs `kubeconform -strict`
+  over `deploy/k8s/` so schema-invalid manifests fail the build.
+- **Secret & IaC scanning** — a `security` job runs Trivy: a **gating** secret
+  scan (no committed credentials) and a **report-only** IaC/Dockerfile misconfig
+  scan (promote to gating once the backlog is clean). Dependency CVEs remain
+  gated by `npm audit --omit=dev`.
+- **Dependabot** (`.github/dependabot.yml`) — weekly updates for npm (grouped
+  prod/dev), GitHub Actions, and the three Docker base images.
+- **CODEOWNERS** (`.github/CODEOWNERS`) — default review ownership.
+- **Branch protection** on `main` (require the CI checks, require review) is a
+  repository setting and must be enabled in GitHub UI/API — it cannot be
+  committed to the repo.
+
 ## Remaining follow-ups (not in this change)
 
 - **JIT user provisioning:** principals must exist in `app_user` (Entra-synced)
