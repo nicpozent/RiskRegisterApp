@@ -41,3 +41,13 @@ business change, in the application layer.
   trail next to the data and can still ship it to a SIEM.
 - **Temporal/system-versioned tables** — powerful, but more complex; the explicit
   event table is simpler and portable.
+
+## Implementation note (later)
+
+Grant-level immutability only holds for **non-owner** roles, and the current
+single-role setup connects as the table owner (who bypasses privilege checks).
+So enforcement is implemented as a `BEFORE UPDATE OR DELETE` trigger on
+`audit_event` (migration `0003`) that raises for every role, owner included.
+Running the app under a dedicated least-privilege role with only `INSERT`/`SELECT`
+on `audit_event` remains the recommended production defence-in-depth. Verified by
+`apps/api/test/integration/audit.test.ts`.

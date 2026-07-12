@@ -42,14 +42,21 @@ No database, no HTTP. Runs in milliseconds.
 - `interface/routes/risk.schemas.test.ts` — request validation incl. the C1 guard.
 
 ### Integration (`test/integration/**/*.test.ts`)
-Boots an ephemeral PostgreSQL, applies `db/migrations/*.sql`, and exercises the
-real adapters. Tests self-skip when `DATABASE_URL` is unset.
+Boots an ephemeral PostgreSQL, applies migrations **via the runner**
+(`npm run migrate`), and exercises the real adapters. Tests self-skip when
+`DATABASE_URL` is unset. Both the API and worker workspaces have suites.
 - `repository.test.ts` — sequential refs, **H2** concurrent-ref race, field
   round-trip, whitelisted updates, `userIdByOid`.
 - `authz.test.ts` — owner/elevated allowed, **H5** non-owner denied (403), audit
   row written, typed `HttpError`.
 - `outbox.test.ts` — **H1** `FOR UPDATE SKIP LOCKED` never double-claims; attempts
   increment.
+- `http.test.ts` — full stack through Express (supertest, mocked verifier):
+  401/403/201, the **C1** accept-bypass rejection, **H5** ownership 403.
+- `audit.test.ts` — **ADR-0010** append-only: INSERT allowed, UPDATE/DELETE
+  rejected by the migration-0003 trigger.
+- worker `notifications.test.ts` — recipient resolution + mark-sent, and the
+  **H3** retry/`last_error` path, with MS Graph mocked.
 
 ### Regression
 The subset tagged `regression(...)` across unit and integration suites, runnable

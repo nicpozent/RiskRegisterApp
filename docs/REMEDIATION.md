@@ -186,6 +186,28 @@ New tests: `risk.schemas.test.ts` (asserts the C1 accept-bypass is blocked) and
   package is built explicitly in every Dockerfile, in `integration.sh`, and in a
   new "Build shared package" CI step — so install no longer triggers a build.
 
+## Audit enforcement, migrations & deeper tests (later round)
+
+Addressing gaps where the implementation trailed the documented design:
+
+- **Append-only audit is now actually enforced** (was only asserted). Migration
+  `0003` adds a `BEFORE UPDATE OR DELETE` trigger on `audit_event` that raises
+  `insufficient_privilege` — it fires for every role, **including the table
+  owner**, so the trail is tamper-evident even in the current single-role setup.
+  (A least-privilege app role remains the recommended prod defence-in-depth.)
+  Covered by `audit.test.ts`.
+- **Real migration runner.** `apps/api/src/infrastructure/migrate.ts`
+  (`npm run migrate`) applies `db/migrations/*.sql` in order, each in its own
+  transaction, tracked in a `schema_migrations` table — so migrations can be
+  applied to an existing/prod database, not only to a fresh compose volume.
+  `scripts/test/integration.sh` now uses it (also exercising it in CI).
+- **Authenticated HTTP-layer tests** (`http.test.ts`, supertest + mocked
+  verifier): 401/403/201 paths, the C1 accept-bypass rejection, and H5 ownership
+  denial — asserted end-to-end through Express, not just at the unit layer.
+- **Worker code is now tested** (`apps/worker/.../notifications.test.ts`, MS
+  Graph mocked): recipient resolution + mark-sent, and the H3 retry/last_error
+  path — the worker's real logic, against a real database.
+
 ## Remaining follow-ups (not in this change)
 
 - **JIT user provisioning:** principals must exist in `app_user` (Entra-synced)

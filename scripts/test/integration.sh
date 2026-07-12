@@ -25,17 +25,23 @@ docker run -d --name "$CONTAINER" \
 
 wait_for 30 "postgres" docker exec "$CONTAINER" pg_isready -U rr_test -d rr_test
 
-info "Applying migrations…"
-for f in db/migrations/*.sql; do
-  info "  → $(basename "$f")"
-  docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -U rr_test -d rr_test < "$f" >/dev/null
-done
+# Non-Entra dummies so the API's config/env parses when buildApp() is imported
+# (the token verifier is mocked in the HTTP tests).
+export ENTRA_TENANT_ID="${ENTRA_TENANT_ID:-test-tenant}"
+export ENTRA_API_AUDIENCE="${ENTRA_API_AUDIENCE:-api://test}"
+
+info "Applying migrations via the runner (also exercises npm run migrate)…"
+MIGRATIONS_DIR="$REPO_ROOT/db/migrations" npm run migrate -w @rr/api
 ok "schema ready"
 
-info "Building shared package…"
+info "Building shared package (needed by the HTTP suite's frameworks route)…"
 npm run build -w @rr/frameworks-data >/dev/null
 
 info "Running API integration suite…"
 # RR_VITEST_ARGS lets callers (e.g. regression.sh) pass extra vitest flags.
 npm run test:int -w @rr/api -- ${RR_VITEST_ARGS:-}
-ok "integration tests passed"
+ok "API integration tests passed"
+
+info "Running worker integration suite…"
+npm run test:int -w @rr/worker -- ${RR_VITEST_ARGS:-}
+ok "worker integration tests passed"
