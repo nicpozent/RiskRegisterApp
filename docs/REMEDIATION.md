@@ -6,6 +6,19 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Browser e2e + load benchmark (later round)
+
+- **Playwright browser e2e** (`apps/web/e2e/`, `npm run e2e -w @rr/web`): builds
+  and previews the SPA, loads it in Chromium and asserts the unauthenticated
+  shell (title, sign-in control, focusability, absence of authenticated nav).
+  Added as the CI **e2e (playwright)** job; pinned `@playwright/test@1.55.x` and
+  a `PW_CHROMIUM_PATH` escape hatch for pre-provisioned browsers. Authenticated
+  flows need a live Entra tenant, so RTL covers component behaviour and the
+  browser layer covers the shell.
+- **Sustained load benchmark** (`scripts/test/benchmark.sh`): autocannon-based,
+  reports p50/p99 latency + req/s, and gates on `PERF_MAX_P99_MS` / `PERF_MIN_RPS`
+  when set (complements the existing `perf.sh` smoke). Documented in TESTING.md.
+
 ## Distributed tracing (later round)
 
 - **OpenTelemetry tracing** on API and worker (`src/tracing.ts`, imported first
