@@ -1,7 +1,7 @@
 import { pca, loginRequest } from './authConfig.js';
 import type {
   RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction,
-  AuditEvent, DirectoryUser,
+  AuditEvent, DirectoryUser, EvidenceMeta,
 } from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -66,6 +66,18 @@ export const Risks = {
   },
   async updateAction(id: string, actionId: string, patch: { description?: string; dueDate?: string; status?: string }): Promise<TreatmentAction> {
     return (await request(`/risks/${id}/actions/${actionId}`, { method: 'PATCH', body: JSON.stringify(patch) })).json();
+  },
+  async evidence(id: string): Promise<EvidenceMeta[]> {
+    return (await request(`/risks/${id}/evidence`)).json();
+  },
+  async uploadEvidence(id: string, body: { filename: string; contentType: string; dataBase64: string }): Promise<EvidenceMeta> {
+    return (await request(`/risks/${id}/evidence`, { method: 'POST', body: JSON.stringify(body) })).json();
+  },
+  async evidenceBlob(id: string, evidenceId: string): Promise<Blob> {
+    return (await request(`/risks/${id}/evidence/${evidenceId}`)).blob();
+  },
+  async deleteEvidence(id: string, evidenceId: string): Promise<void> {
+    await request(`/risks/${id}/evidence/${evidenceId}`, { method: 'DELETE' });
   },
 };
 

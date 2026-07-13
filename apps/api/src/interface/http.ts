@@ -23,7 +23,13 @@ export function buildApp() {
   app.use(helmet());
   // Bearer tokens are sent in the Authorization header, not cookies — no credentials.
   app.use(cors({ origin: env.CORS_ORIGIN, exposedHeaders: ['X-Total-Count', 'ETag', 'X-Request-Id'] }));
-  app.use(express.json({ limit: '256kb' }));
+  // 256 kb JSON everywhere, except evidence uploads which carry base64 binary
+  // and parse with a larger limit in their own route handler.
+  const smallJson = express.json({ limit: '256kb' });
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && /^\/risks\/[^/]+\/evidence$/.test(req.path)) return next();
+    return smallJson(req, res, next);
+  });
   // Structured logs: never log bearer tokens/cookies; correlate by request id
   // (honour an inbound X-Request-Id from the edge, else mint one; echo it back).
   app.use(pinoHttp({

@@ -28,6 +28,21 @@ export const actionCreateSchema = z.object({
 });
 export const actionUpdateSchema = actionCreateSchema.partial();
 
+// Evidence upload. The binary arrives base64-encoded in JSON (no multipart dep);
+// content type is allow-listed and the decoded size is capped in the route.
+export const EVIDENCE_CONTENT_TYPES = [
+  'application/pdf', 'image/png', 'image/jpeg', 'text/csv', 'text/plain',
+  'application/msword', 'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+] as const;
+export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024; // 10 MB
+export const evidenceSchema = z.object({
+  filename: z.string().min(1).max(255),
+  contentType: z.enum(EVIDENCE_CONTENT_TYPES),
+  dataBase64: z.string().min(1),
+});
+
 // Pagination for GET /risks. Sane defaults + a hard cap so a client can't ask
 // for an unbounded page.
 export const listQuerySchema = z.object({

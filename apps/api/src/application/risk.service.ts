@@ -148,6 +148,49 @@ export class RiskService {
     });
   }
 
+  // ---- Evidence attachments ----
+
+  /** Evidence metadata for a risk (null if the risk doesn't exist). */
+  async listEvidence(riskId: string) {
+    const risk = await this.reads.findById(riskId);
+    if (!risk) return null;
+    return this.reads.evidenceFor(riskId);
+  }
+
+  async addEvidence(riskId: string, file: { filename: string; contentType: string; sizeBytes: number; data: Buffer }, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      const uploadedBy = await repo.ensureUser(actor);
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      await this.assertCanModify(repo, actor, risk);
+      const meta = await repo.insertEvidence(riskId, { ...file, uploadedBy });
+      await audit(tx, actor.oid, 'created', 'evidence', meta.id, null,
+        { filename: file.filename, contentType: file.contentType, sizeBytes: file.sizeBytes });
+      await emit(tx, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: `evidence added: ${file.filename}` });
+      return meta;
+    });
+  }
+
+  /** Raw blob for download (null if the risk or evidence is unknown). Read-only. */
+  async getEvidence(riskId: string, evidenceId: string) {
+    const risk = await this.reads.findById(riskId);
+    if (!risk) return null;
+    return this.reads.evidenceBlob(riskId, evidenceId);
+  }
+
+  async deleteEvidence(riskId: string, evidenceId: string, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      await this.assertCanModify(repo, actor, risk);
+      const ok = await repo.deleteEvidence(riskId, evidenceId);
+      if (!ok) return false;
+      await audit(tx, actor.oid, 'modified', 'evidence', evidenceId, { evidenceId }, null);
+      return true;
+    });
+  }
+
   // ---- Treatment actions ----
 
   /** Actions for a risk (null if the risk doesn't exist). */
