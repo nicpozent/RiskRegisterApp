@@ -1,0 +1,41 @@
+name: CodeQL
+
+# Static application security testing (SAST) beyond the Trivy scans in ci.yml.
+# CodeQL analyses the TypeScript/JavaScript for injection, auth, data-flow and
+# other semantic vulnerability patterns, and uploads results to the repository's
+# code-scanning dashboard.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1" # weekly, catches advisories in unchanged code
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write # upload SARIF to code scanning
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      # JS/TS is interpreted — no build step needed for extraction.
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"

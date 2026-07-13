@@ -46,6 +46,11 @@ jobs:
           npm test -w @rr/api
           npm test -w @rr/web
 
+      # Fail the build if the controls-as-code self-assessment drifts from the
+      # code (missing evidence paths, schema violations).
+      - name: Controls-as-code assessment
+        run: node compliance/validate.mjs
+
       - name: Build
         run: |
           npm run build -w @rr/frameworks-data
