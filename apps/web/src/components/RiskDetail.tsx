@@ -17,11 +17,13 @@ export function RiskDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  function load() {
-    setError(null);
+  // `keepError` lets the conflict path refresh the risk without wiping the
+  // "changed by someone else" message the user still needs to see.
+  function load(keepError = false) {
+    if (!keepError) setError(null);
     Risks.get(id).then(setRisk).catch((e) => setError(String(e.message ?? e)));
   }
-  useEffect(load, [id]);
+  useEffect(() => { load(); }, [id]);
 
   async function save(body: RiskInput) {
     if (!risk) return;
@@ -34,7 +36,7 @@ export function RiskDetail({ id }: { id: string }) {
     } catch (e) {
       if (e instanceof ConflictError) {
         setError(e.message);
-        load(); // pull the winning version so the next save can succeed
+        load(true); // pull the winning version but keep the conflict message visible
       } else {
         setError(String((e as Error).message ?? e));
       }

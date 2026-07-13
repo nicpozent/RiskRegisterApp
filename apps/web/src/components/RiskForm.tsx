@@ -56,21 +56,21 @@ export function RiskForm({ initial = {}, showStatus, submitLabel, busy, onSubmit
   return (
     <form className="card" onSubmit={submit}>
       <div className="field">
-        <label>Title</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required minLength={3} maxLength={200} />
+        <label htmlFor="rf-title">Title</label>
+        <input id="rf-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={3} maxLength={200} />
       </div>
       <div className="field">
-        <label>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={4000} />
+        <label htmlFor="rf-description">Description</label>
+        <textarea id="rf-description" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={4000} />
       </div>
       <div className="grid2">
         <div className="field">
-          <label>Category</label>
-          <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={80} />
+          <label htmlFor="rf-category">Category</label>
+          <input id="rf-category" value={category} onChange={(e) => setCategory(e.target.value)} maxLength={80} />
         </div>
         <div className="field">
-          <label>Treatment</label>
-          <select value={treatment} onChange={(e) => setTreatment(e.target.value as RiskInput['treatment'])}>
+          <label htmlFor="rf-treatment">Treatment</label>
+          <select id="rf-treatment" value={treatment} onChange={(e) => setTreatment(e.target.value as RiskInput['treatment'])}>
             {TREATMENTS.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
@@ -78,46 +78,46 @@ export function RiskForm({ initial = {}, showStatus, submitLabel, busy, onSubmit
 
       <div className="grid4">
         <div className="field">
-          <label>Inherent likelihood</label>
-          <select value={inherentL} onChange={(e) => setInherentL(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
+          <label htmlFor="rf-inherentL">Inherent likelihood</label>
+          <select id="rf-inherentL" value={inherentL} onChange={(e) => setInherentL(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
         </div>
         <div className="field">
-          <label>Inherent impact</label>
-          <select value={inherentI} onChange={(e) => setInherentI(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
+          <label htmlFor="rf-inherentI">Inherent impact</label>
+          <select id="rf-inherentI" value={inherentI} onChange={(e) => setInherentI(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
         </div>
         <div className="field">
-          <label>Residual likelihood</label>
-          <select value={residualL} onChange={(e) => setResidualL(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
+          <label htmlFor="rf-residualL">Residual likelihood</label>
+          <select id="rf-residualL" value={residualL} onChange={(e) => setResidualL(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
         </div>
         <div className="field">
-          <label>Residual impact</label>
-          <select value={residualI} onChange={(e) => setResidualI(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
+          <label htmlFor="rf-residualI">Residual impact</label>
+          <select id="rf-residualI" value={residualI} onChange={(e) => setResidualI(e.target.value)}>{scale.map((n) => <option key={n}>{n}</option>)}</select>
         </div>
       </div>
 
       <div className="grid4">
         <div className="field">
-          <label>SLE (single loss, £)</label>
-          <input type="number" min={0} value={sle} onChange={(e) => setSle(e.target.value)} />
+          <label htmlFor="rf-sle">SLE (single loss, £)</label>
+          <input id="rf-sle" type="number" min={0} value={sle} onChange={(e) => setSle(e.target.value)} />
         </div>
         <div className="field">
-          <label>ARO (inherent /yr)</label>
-          <input type="number" min={0} step="0.01" value={aro} onChange={(e) => setAro(e.target.value)} />
+          <label htmlFor="rf-aro">ARO (inherent /yr)</label>
+          <input id="rf-aro" type="number" min={0} step="0.01" value={aro} onChange={(e) => setAro(e.target.value)} />
         </div>
         <div className="field">
-          <label>ARO (residual /yr)</label>
-          <input type="number" min={0} step="0.01" value={residualAro} onChange={(e) => setResidualAro(e.target.value)} />
+          <label htmlFor="rf-residualAro">ARO (residual /yr)</label>
+          <input id="rf-residualAro" type="number" min={0} step="0.01" value={residualAro} onChange={(e) => setResidualAro(e.target.value)} />
         </div>
         <div className="field">
-          <label>Next review</label>
-          <input type="date" value={nextReview} onChange={(e) => setNextReview(e.target.value)} />
+          <label htmlFor="rf-nextReview">Next review</label>
+          <input id="rf-nextReview" type="date" value={nextReview} onChange={(e) => setNextReview(e.target.value)} />
         </div>
       </div>
 
       {showStatus && (
         <div className="field">
-          <label>Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value as EditableStatus)}>
+          <label htmlFor="rf-status">Status</label>
+          <select id="rf-status" value={status} onChange={(e) => setStatus(e.target.value as EditableStatus)}>
             {PATCH_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
