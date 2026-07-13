@@ -1,5 +1,5 @@
 # ---- build ----
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /repo
 ARG VITE_ENTRA_TENANT_ID
 ARG VITE_ENTRA_SPA_CLIENT_ID
