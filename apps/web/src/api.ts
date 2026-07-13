@@ -1,5 +1,8 @@
 import { pca, loginRequest } from './authConfig.js';
-import type { RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction } from './types.js';
+import type {
+  RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction,
+  AuditEvent, DirectoryUser,
+} from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
@@ -63,6 +66,20 @@ export const Risks = {
   },
   async updateAction(id: string, actionId: string, patch: { description?: string; dueDate?: string; status?: string }): Promise<TreatmentAction> {
     return (await request(`/risks/${id}/actions/${actionId}`, { method: 'PATCH', body: JSON.stringify(patch) })).json();
+  },
+};
+
+export const Admin = {
+  async audit(opts: { entity?: string; limit?: number; offset?: number } = {}): Promise<Page<AuditEvent>> {
+    const p = new URLSearchParams();
+    if (opts.entity) p.set('entity', opts.entity);
+    p.set('limit', String(opts.limit ?? 25));
+    p.set('offset', String(opts.offset ?? 0));
+    const res = await request(`/admin/audit?${p.toString()}`);
+    return { items: await res.json(), total: Number(res.headers.get('X-Total-Count') ?? '0') };
+  },
+  async users(): Promise<DirectoryUser[]> {
+    return (await request('/admin/users')).json();
   },
 };
 

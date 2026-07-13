@@ -181,6 +181,25 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
       .set('Authorization', bearer(viewer)).expect(404);
   });
 
+  it('exposes the audit trail to Auditor and denies a Viewer (403)', async () => {
+    // A write generates an audit row.
+    await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+
+    await request(app).get('/admin/audit').set('Authorization', bearer(viewer)).expect(403);
+
+    const auditor = { oid: 'au-oid', name: 'Au', roles: ['Auditor'] };
+    const res = await request(app).get('/admin/audit?entity=risk').set('Authorization', bearer(auditor)).expect(200);
+    expect(res.headers['x-total-count']).toBe('1');
+    expect(res.body[0]).toMatchObject({ action: 'created', entity: 'risk' });
+  });
+
+  it('lists provisioned users for an admin and denies a contributor (403)', async () => {
+    await seedUser('dir-oid', 'dir@b.com', 'Directory User');
+    await request(app).get('/admin/users').set('Authorization', bearer(contributor)).expect(403);
+    const res = await request(app).get('/admin/users').set('Authorization', bearer(admin)).expect(200);
+    expect(res.body.map((u: { email: string }) => u.email)).toContain('dir@b.com');
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))

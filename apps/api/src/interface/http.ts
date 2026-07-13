@@ -10,6 +10,7 @@ import { metricsMiddleware, metricsHandler } from './metrics.js';
 import { risks } from './routes/risks.js';
 import { controls } from './routes/controls.js';
 import { frameworks } from './routes/frameworks.js';
+import { admin } from './routes/admin.js';
 import { pool } from '../infrastructure/db.js';
 import { HttpError } from '../application/errors.js';
 
@@ -47,6 +48,7 @@ export function buildApp() {
   app.use('/risks', authenticate, risks);
   app.use('/controls', authenticate, controls);
   app.use('/frameworks', authenticate, frameworks);
+  app.use('/admin', authenticate, admin);
 
   app.use((_req, res) => res.status(404).json({ error: 'not found' }));
 
