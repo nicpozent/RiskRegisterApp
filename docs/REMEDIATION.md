@@ -6,6 +6,23 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Backup / DR + load-perf (later round)
+
+- **Backup & restore.** `scripts/ops/backup.sh` (pg_dump, custom compressed
+  format, local retention + off-host upload hook) and `scripts/ops/restore.sh`
+  (guarded `pg_restore`). A nightly `db-backup` **CronJob**
+  (`deploy/k8s/backup-cronjob.yaml`, non-root, read-only-rootfs, dropped caps)
+  writes to a `db-backups` PVC; the NetworkPolicy now lets `app: db-backup`
+  reach the database.
+- **DR runbook** (`docs/ops/dr-runbook.md`): what must be recoverable, RPO/RTO
+  targets (single-instance vs managed/HA), a quarterly restore drill, recovery
+  scenarios, and the single-instance limitation + managed-Postgres/HA path
+  (the app tier is already stateless-ready).
+- **Load/perf smoke** (`scripts/test/perf.sh`): autocannon-based throughput
+  check (non-gating), documented in TESTING.md.
+- Adds control `DR-1` (backup & disaster recovery) to the controls-as-code
+  assessment — now **21 controls, 19 implemented, 2 planned**.
+
 ## GDPR / privacy tooling (later round)
 
 - **Data-subject tooling** (`apps/api/src/privacy/`, run via

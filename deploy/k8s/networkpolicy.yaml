@@ -16,4 +16,5 @@ spec:
     - from:
         - podSelector: { matchLabels: { app: api } }
         - podSelector: { matchLabels: { app: worker } }
+        - podSelector: { matchLabels: { app: db-backup } }
       ports: [{ protocol: TCP, port: 5432 }]
