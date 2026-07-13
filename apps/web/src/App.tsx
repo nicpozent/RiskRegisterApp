@@ -6,11 +6,17 @@ import { RiskDetail } from './components/RiskDetail.js';
 import { NewRisk } from './components/NewRisk.js';
 import { Dashboard } from './components/Dashboard.js';
 import { ControlLibrary } from './components/ControlLibrary.js';
+import { Admin } from './components/Admin.js';
+import { ADMIN_ROLES } from './types.js';
 
 export default function App() {
   const { instance, accounts } = useMsal();
   const route = useRoute();
   const account = accounts[0];
+  // App roles ride in the token claims; used only to show/hide the Admin link
+  // (the API still enforces authorization server-side).
+  const roles = (account?.idTokenClaims as { roles?: string[] } | undefined)?.roles ?? [];
+  const isAdmin = roles.some((r) => ADMIN_ROLES.includes(r));
 
   return (
     <>
@@ -24,6 +30,7 @@ export default function App() {
               <a href="#/dashboard" className={route.name === 'dashboard' ? 'active' : ''}>Dashboard</a>
               <a href="#/" className={route.name === 'register' ? 'active' : ''}>Register</a>
               <a href="#/controls" className={route.name === 'controls' ? 'active' : ''}>Controls</a>
+              {isAdmin && <a href="#/admin" className={route.name === 'admin' ? 'active' : ''}>Admin</a>}
             </nav>
             <span className="who">{account?.name ?? account?.username}</span>
             <button onClick={() => instance.logoutRedirect()}>Sign out</button>
@@ -45,6 +52,7 @@ export default function App() {
           {route.name === 'register' && <RiskRegister />}
           {route.name === 'dashboard' && <Dashboard />}
           {route.name === 'controls' && <ControlLibrary />}
+          {route.name === 'admin' && <Admin />}
           {route.name === 'new' && <NewRisk />}
           {route.name === 'risk' && <RiskDetail id={route.id} />}
         </AuthenticatedTemplate>

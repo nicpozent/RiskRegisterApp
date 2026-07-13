@@ -52,6 +52,16 @@ export interface TreatmentAction {
   dueDate?: string; status: ActionStatus; createdAt: string; updatedAt: string;
 }
 
+// Admin / governance views.
+export interface AuditEvent {
+  id: number; actorOid: string; action: string; entity: string;
+  entityId?: string; before?: unknown; after?: unknown; at: string;
+}
+export interface DirectoryUser {
+  id: string; entraOid: string; displayName: string; email: string; createdAt: string;
+}
+export const ADMIN_ROLES = ['Administrator', 'CISO.RiskManager', 'Auditor'];
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =

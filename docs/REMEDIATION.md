@@ -348,7 +348,23 @@ Addressing gaps where the implementation trailed the documented design:
   migration `0007` adds `created_at`/`updated_at` for ordering and a `risk_id`
   index. Covered by integration tests (add→list→complete, invalid-status 400,
   unknown-risk 404).
-- **Later phases (backlog):** admin, reporting/evidence export (needs new API).
+- **Later phases (backlog):** reporting/evidence export (needs new API).
+
+## SPA product UI — Phase 5 (later round)
+
+- **Admin / governance console** at `#/admin` (nav link shown only to Admin /
+  CISO / Auditor — determined from token role claims client-side; the server
+  still enforces authz):
+  - **Audit trail viewer** over the append-only `audit_event` table: newest-first,
+    entity filter, pagination (`X-Total-Count`).
+  - **User directory**: the JIT-provisioned `app_user` rows.
+- **New API endpoints** under `/admin`:
+  - `GET /admin/audit` — Admin / CISO / **Auditor** (read-only governance role).
+  - `GET /admin/users` — Admin / CISO.
+  Both reject other roles with 403. Covered by integration tests
+  (Auditor allowed / Viewer 403 on the trail; Admin allowed / Contributor 403 on
+  the directory).
+- **Later phases (backlog):** reporting/evidence export (needs new API).
 
 ## Remaining follow-ups (not in this change)
 
