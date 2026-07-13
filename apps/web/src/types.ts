@@ -75,6 +75,15 @@ export const EVIDENCE_CONTENT_TYPES = [
 ];
 export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 
+// Maker-checker change requests (mirrors API change-request routes).
+export type ChangeRequestStatus = 'pending' | 'approved' | 'rejected';
+export interface ChangeRequest {
+  id: string; riskId: string; proposed: Partial<RiskInput> & Record<string, unknown>;
+  status: ChangeRequestStatus; submitterOid: string; reviewerOid?: string;
+  reviewNote?: string; createdAt: string; decidedAt?: string;
+}
+export const ELEVATED_ROLES = ['Administrator', 'CISO.RiskManager'];
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =

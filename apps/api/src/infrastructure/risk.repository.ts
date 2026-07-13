@@ -166,6 +166,39 @@ export class RiskRepository {
       [p.oid, p.name || p.oid, p.email ?? null]);
     return rows[0].id;
   }
+  // ---- Change requests (maker-checker) ----
+  private static readonly CR_COLS = `id, risk_id as "riskId", proposed, status,
+    submitter_oid as "submitterOid", reviewer_oid as "reviewerOid", review_note as "reviewNote",
+    created_at as "createdAt", decided_at as "decidedAt"`;
+
+  async insertChangeRequest(riskId: string, proposed: Record<string, unknown>, submitterOid: string) {
+    const { rows } = await this.db.query(
+      `INSERT INTO risk_change_request (risk_id, proposed, submitter_oid)
+         VALUES ($1,$2,$3) RETURNING ${RiskRepository.CR_COLS}`,
+      [riskId, JSON.stringify(proposed), submitterOid]);
+    return rows[0];
+  }
+  async changeRequestsFor(riskId: string) {
+    const { rows } = await this.db.query(
+      `SELECT ${RiskRepository.CR_COLS} FROM risk_change_request
+        WHERE risk_id=$1 ORDER BY created_at DESC`, [riskId]);
+    return rows;
+  }
+  async getChangeRequest(riskId: string, crId: string) {
+    const { rows } = await this.db.query(
+      `SELECT ${RiskRepository.CR_COLS} FROM risk_change_request WHERE risk_id=$1 AND id=$2`, [riskId, crId]);
+    return rows[0] ?? null;
+  }
+  /** Record a decision only if still pending (atomic); null if it was already decided. */
+  async decideChangeRequest(crId: string, d: { status: 'approved' | 'rejected'; reviewerOid: string; reviewNote?: string }) {
+    const { rows } = await this.db.query(
+      `UPDATE risk_change_request
+          SET status=$2, reviewer_oid=$3, review_note=$4, decided_at=now()
+        WHERE id=$1 AND status='pending' RETURNING ${RiskRepository.CR_COLS}`,
+      [crId, d.status, d.reviewerOid, d.reviewNote ?? null]);
+    return rows[0] ?? null;
+  }
+
   // ---- Evidence attachments (risk-scoped, stored as bytea) ----
   async evidenceFor(riskId: string) {
     const { rows } = await this.db.query(

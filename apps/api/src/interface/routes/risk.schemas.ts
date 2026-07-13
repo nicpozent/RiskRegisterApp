@@ -28,6 +28,9 @@ export const actionCreateSchema = z.object({
 });
 export const actionUpdateSchema = actionCreateSchema.partial();
 
+// Maker-checker: the proposed change reuses updateSchema; a rejection may carry a note.
+export const rejectSchema = z.object({ note: z.string().max(1000).optional() });
+
 // Evidence upload. The binary arrives base64-encoded in JSON (no multipart dep);
 // content type is allow-listed and the decoded size is capped in the route.
 export const EVIDENCE_CONTENT_TYPES = [

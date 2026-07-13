@@ -98,6 +98,17 @@
       "evidence": ["db/migrations/0005_least_privilege_role.sql"]
     },
     {
+      "id": "SOD-1",
+      "title": "Segregation of duties (maker-checker approvals)",
+      "statement": "Proposed risk changes are recorded as change requests and take effect only when a DIFFERENT elevated user approves; the maker cannot approve their own change and non-elevated roles cannot decide.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.5.3", "A.8.2"],
+        "nistCsf": ["PR.AA-05", "GV.RR-02"]
+      },
+      "evidence": ["db/migrations/0010_risk_change_request.sql", "apps/api/src/application/risk.service.ts", "apps/api/src/interface/routes/risks.ts"]
+    },
+    {
       "id": "INT-1",
       "title": "Optimistic concurrency (data integrity)",
       "statement": "Risk edits carry a version; an If-Match check-and-set rejects stale writes with 409 instead of silently overwriting concurrent changes.",

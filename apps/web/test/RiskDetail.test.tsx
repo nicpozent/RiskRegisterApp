@@ -18,6 +18,7 @@ vi.mock('../src/router.js', () => ({ navigate: vi.fn() }));
 vi.mock('../src/components/RiskControls.js', () => ({ RiskControls: () => null }));
 vi.mock('../src/components/RiskActions.js', () => ({ RiskActions: () => null }));
 vi.mock('../src/components/RiskEvidence.js', () => ({ RiskEvidence: () => null }));
+vi.mock('../src/components/RiskChangeRequests.js', () => ({ RiskChangeRequests: () => null }));
 
 import { RiskDetail } from '../src/components/RiskDetail.js';
 

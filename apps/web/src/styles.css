@@ -113,6 +113,11 @@ textarea { resize: vertical; min-height: 72px; }
 
 .center { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
 
+.crstatus { font-size: 12px; font-weight: 600; text-transform: capitalize; }
+.crstatus.pending { color: var(--medium); }
+.crstatus.approved { color: var(--low); }
+.crstatus.rejected { color: var(--critical); }
+
 button.linklike { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; }
 button.linklike:hover { text-decoration: underline; }
 
