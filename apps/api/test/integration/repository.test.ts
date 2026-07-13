@@ -37,11 +37,21 @@ describe.skipIf(!HAS_DB)('RiskRepository (integration)', () => {
     expect(got?.controlIds).toEqual([]);
   });
 
-  it('updates only whitelisted columns', async () => {
+  it('updates only whitelisted columns and bumps version', async () => {
     const r = await repo.insert({ ...base });
+    expect(r.version).toBe(0);
     const updated = await repo.update(r.id, { status: 'monitored', title: 'Renamed' });
     expect(updated?.status).toBe('monitored');
     expect(updated?.title).toBe('Renamed');
+    expect(updated?.version).toBe(1);
+  });
+
+  it('updateIfVersion applies on match, reports conflict on mismatch, notfound if absent', async () => {
+    const r = await repo.insert({ ...base });
+    const ok = await repo.updateIfVersion(r.id, { title: 'v1' }, 0);
+    expect(typeof ok === 'object' && ok.version).toBe(1);
+    expect(await repo.updateIfVersion(r.id, { title: 'stale' }, 0)).toBe('conflict');
+    expect(await repo.updateIfVersion('00000000-0000-0000-0000-000000000000', { title: 'x' }, 0)).toBe('notfound');
   });
 
   it('resolves an Entra oid to the internal app_user id', async () => {

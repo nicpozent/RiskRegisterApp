@@ -7,3 +7,4 @@ export class HttpError extends Error {
 }
 
 export const forbidden = (msg = 'forbidden') => new HttpError(403, msg);
+export const conflict = (msg = 'version conflict') => new HttpError(409, msg);

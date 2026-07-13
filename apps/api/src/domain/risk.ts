@@ -9,6 +9,7 @@ export interface Risk {
   inherentL: number; inherentI: number; residualL: number; residualI: number;
   treatment: Treatment; status: RiskStatus;
   sle?: number; aro?: number; residualAro?: number; nextReview?: string;
+  version: number;   // optimistic-concurrency token, bumped on each update
 }
 
 export interface RiskView extends Risk {

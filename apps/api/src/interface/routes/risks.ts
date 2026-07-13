@@ -20,6 +20,7 @@ risks.get('/', requireRole(...AnyRole), asyncHandler(async (req, res) => {
 risks.get('/:id', requireRole(...AnyRole), asyncHandler(async (req, res) => {
   const r = await svc.get(req.params.id);
   if (!r) return res.status(404).json({ error: 'not found' });
+  res.setHeader('ETag', `"${r.version}"`);   // clients echo via If-Match on PATCH
   res.json(r);
 }));
 
@@ -34,8 +35,19 @@ risks.post('/', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
 risks.patch('/:id', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const updated = await svc.update(req.params.id, parsed.data, req.user!);
+  // Optional optimistic concurrency: If-Match carries the client's last-seen
+  // version (from the ETag). Absent → last-write-wins (backward compatible).
+  const ifMatch = req.get('If-Match');
+  let expectedVersion: number | undefined;
+  if (ifMatch !== undefined) {
+    expectedVersion = Number(ifMatch.replace(/^W\//, '').replace(/"/g, ''));
+    if (!Number.isInteger(expectedVersion)) {
+      return res.status(400).json({ error: 'invalid If-Match: expected an integer version' });
+    }
+  }
+  const updated = await svc.update(req.params.id, parsed.data, req.user!, expectedVersion);
   if (!updated) return res.status(404).json({ error: 'not found' });
+  res.setHeader('ETag', `"${updated.version}"`);
   res.json(updated);
 }));
 

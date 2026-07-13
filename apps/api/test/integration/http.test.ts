@@ -78,6 +78,32 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     await request(app).post(`/risks/${created.body.id}/accept`).set('Authorization', bearer(contributor)).expect(403);
   });
 
+  it('optimistic concurrency: stale If-Match is rejected with 409, fresh succeeds', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const id = created.body.id;
+    expect(created.body.version).toBe(0);
+
+    // Correct version → applies, version bumps, new ETag returned.
+    const first = await request(app).patch(`/risks/${id}`).set('Authorization', bearer(admin))
+      .set('If-Match', '0').send({ title: 'Renamed once' }).expect(200);
+    expect(first.body.version).toBe(1);
+    expect(first.headers.etag).toBe('"1"');
+
+    // Reusing the stale version 0 → conflict.
+    await request(app).patch(`/risks/${id}`).set('Authorization', bearer(admin))
+      .set('If-Match', '0').send({ title: 'Stale write' }).expect(409);
+
+    // No If-Match → last-write-wins (backward compatible).
+    await request(app).patch(`/risks/${id}`).set('Authorization', bearer(admin))
+      .send({ title: 'Unconditional' }).expect(200);
+  });
+
+  it('rejects a non-integer If-Match (400)', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))
+      .set('If-Match', 'not-a-number').send({ title: 'x' }).expect(400);
+  });
+
   it('regression(H5): a non-owner contributor cannot modify someone else\'s risk (403)', async () => {
     const ownerId = await seedUser('owner-oid', 'owner@b.com');
     const risk = await repo.insert({ ...validBody, ownerId, status: 'open', stakeholderIds: [], controlIds: [] });

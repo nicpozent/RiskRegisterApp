@@ -5,7 +5,7 @@ import { RiskRepository } from '../infrastructure/risk.repository.js';
 import type { Queryable } from '../infrastructure/db.js';
 import { emit } from './events.js';
 import { audit } from '../infrastructure/audit.js';
-import { forbidden } from './errors.js';
+import { forbidden, conflict } from './errors.js';
 
 export class RiskService {
   private reads: RiskRepository;
@@ -45,7 +45,7 @@ export class RiskService {
     }
   }
 
-  async create(input: Omit<Risk,'id'|'ref'>, actor: Actor) {
+  async create(input: Omit<Risk,'id'|'ref'|'version'>, actor: Actor) {
     return this.withTx(async (repo, tx) => {
       await repo.ensureUser(actor);            // JIT-provision the creator
       const created = await repo.insert(input);
@@ -55,13 +55,23 @@ export class RiskService {
     });
   }
 
-  async update(id: string, patch: Partial<Risk>, actor: Actor) {
+  async update(id: string, patch: Partial<Risk>, actor: Actor, expectedVersion?: number) {
     return this.withTx(async (repo, tx) => {
       await repo.ensureUser(actor);            // JIT-provision the actor before authz
       const before = await repo.findById(id);
       if (!before) return null;
       await this.assertCanModify(repo, actor, before);
-      const after = await repo.update(id, patch);
+
+      let after: Risk | null;
+      if (expectedVersion !== undefined) {
+        const res = await repo.updateIfVersion(id, patch, expectedVersion);
+        if (res === 'conflict') throw conflict(`risk was modified by someone else (expected version ${expectedVersion})`);
+        if (res === 'notfound') return null;
+        after = res;
+      } else {
+        after = await repo.update(id, patch);
+      }
+
       await audit(tx, actor.oid, 'modified', 'risk', id, before, after);
       await emit(tx, { type: 'risk.updated', riskId: id, actorOid: actor.oid, summary: Object.keys(patch).join(', ') });
       return after ? toView(after) : null;

@@ -257,6 +257,18 @@ Addressing gaps where the implementation trailed the documented design:
   `db-role.test.ts` (`SET ROLE rr_api` → append-only enforced at the grant level,
   business tables writable).
 
+## Runtime robustness (later round)
+
+- **Graceful shutdown.** The API and worker handle `SIGTERM`/`SIGINT`: the API
+  stops accepting connections and drains in-flight requests before closing the
+  pool; the worker stops scheduling and lets the current batch finish. Both
+  force-exit after a 10s grace period. This makes k8s rolling updates clean.
+- **Optimistic concurrency on risk edits.** `risk.version` (migration `0006`)
+  bumps on every update. `PATCH /risks/:id` accepts `If-Match: <version>` (from
+  the `ETag` on `GET`); a stale value returns **409** instead of silently
+  clobbering a concurrent edit. Absent `If-Match` → last-write-wins
+  (backward-compatible). Atomic check-and-set (`WHERE version = expected`).
+
 ## Remaining follow-ups (not in this change)
 
 - **Event bus:** replace the DB-polling outbox with a broker when throughput

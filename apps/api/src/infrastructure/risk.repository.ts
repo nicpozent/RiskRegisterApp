@@ -4,7 +4,12 @@ import type { Queryable } from './db.js';
 const COLS = `id, ref, title, description, category, owner_id as "ownerId",
   inherent_l as "inherentL", inherent_i as "inherentI",
   residual_l as "residualL", residual_i as "residualI",
-  treatment, status, sle, aro, residual_aro as "residualAro", next_review as "nextReview"`;
+  treatment, status, sle, aro, residual_aro as "residualAro", next_review as "nextReview", version`;
+
+const COL_MAP: Record<string, string> = { title:'title', description:'description', category:'category',
+  ownerId:'owner_id', inherentL:'inherent_l', inherentI:'inherent_i', residualL:'residual_l',
+  residualI:'residual_i', treatment:'treatment', status:'status', sle:'sle', aro:'aro',
+  residualAro:'residual_aro', nextReview:'next_review' };
 
 export class RiskRepository {
   constructor(private db: Queryable) {}
@@ -52,7 +57,7 @@ export class RiskRepository {
     const { rows } = await this.db.query(`SELECT ${COLS} FROM risk WHERE id=$1`, [id]);
     return rows[0] ? this.hydrate(rows[0]) : null;
   }
-  async insert(r: Omit<Risk,'id'|'ref'>): Promise<Risk> {
+  async insert(r: Omit<Risk,'id'|'ref'|'version'>): Promise<Risk> {
     const ref = await this.nextRef();
     const { rows } = await this.db.query(
       `INSERT INTO risk (ref,title,description,category,owner_id,inherent_l,inherent_i,
@@ -65,17 +70,42 @@ export class RiskRepository {
     for (const cid of r.controlIds ?? []) await this.linkControl(created.id, cid);
     return created;
   }
+  /** Build `col=$n` assignments for the whitelisted patch fields. */
+  private buildSets(p: Partial<Risk>, vals: unknown[]): string[] {
+    const sets: string[] = [];
+    for (const [k, col] of Object.entries(COL_MAP)) {
+      if (k in p) { vals.push((p as any)[k]); sets.push(`${col}=$${vals.length}`); }
+    }
+    return sets;
+  }
+
+  /** Last-write-wins update (bumps version). */
   async update(id: string, p: Partial<Risk>): Promise<Risk | null> {
-    const map: Record<string,string> = { title:'title', description:'description', category:'category',
-      ownerId:'owner_id', inherentL:'inherent_l', inherentI:'inherent_i', residualL:'residual_l',
-      residualI:'residual_i', treatment:'treatment', status:'status', sle:'sle', aro:'aro',
-      residualAro:'residual_aro', nextReview:'next_review' };
-    const sets: string[] = []; const vals: any[] = [];
-    for (const [k, col] of Object.entries(map)) if (k in p) { vals.push((p as any)[k]); sets.push(`${col}=$${vals.length}`); }
+    const vals: unknown[] = [];
+    const sets = this.buildSets(p, vals);
     if (!sets.length) return this.findById(id);
     vals.push(id);
-    await this.db.query(`UPDATE risk SET ${sets.join(',')}, updated_at=now() WHERE id=$${vals.length}`, vals);
+    await this.db.query(
+      `UPDATE risk SET ${sets.join(',')}, version=version+1, updated_at=now() WHERE id=$${vals.length}`, vals);
     return this.findById(id);
+  }
+
+  /**
+   * Optimistic-concurrency update: only applies if the row's current version
+   * equals expectedVersion. Returns 'notfound' | 'conflict' | the updated Risk.
+   * The conditional WHERE makes the check-and-set atomic (no TOCTOU).
+   */
+  async updateIfVersion(id: string, p: Partial<Risk>, expectedVersion: number): Promise<'notfound' | 'conflict' | Risk> {
+    const vals: unknown[] = [];
+    const sets = this.buildSets(p, vals);
+    vals.push(id); const idParam = vals.length;
+    vals.push(expectedVersion); const verParam = vals.length;
+    const assignments = [...sets, 'version = version + 1', 'updated_at = now()'].join(', ');
+    const res = await this.db.query(
+      `UPDATE risk SET ${assignments} WHERE id=$${idParam} AND version=$${verParam}`, vals);
+    if ((res as any).rowCount > 0) return (await this.findById(id))!;
+    const cur = await this.db.query('SELECT 1 FROM risk WHERE id=$1', [id]);
+    return cur.rows.length ? 'conflict' : 'notfound';
   }
   /** Resolve an Entra object id to the internal app_user id (null if unknown). */
   async userIdByOid(oid: string): Promise<string | null> {
