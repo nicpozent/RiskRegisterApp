@@ -28,7 +28,7 @@ const WRITE_ROLES = [Roles.Admin, Roles.Ciso, Roles.RiskOwner, Roles.Contributor
 risks.post('/', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  res.status(201).json(await svc.create(parsed.data, req.user!.oid));
+  res.status(201).json(await svc.create(parsed.data, req.user!));
 }));
 
 risks.patch('/:id', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {

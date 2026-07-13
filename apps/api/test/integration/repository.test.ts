@@ -50,6 +50,16 @@ describe.skipIf(!HAS_DB)('RiskRepository (integration)', () => {
     expect(await repo.userIdByOid('missing')).toBeNull();
   });
 
+  it('ensureUser upserts idempotently and preserves email on a null claim', async () => {
+    const id1 = await repo.ensureUser({ oid: 'u1', name: 'U One', email: 'u1@b.com' });
+    const id2 = await repo.ensureUser({ oid: 'u1', name: 'U One Renamed' }); // no email claim
+    expect(id2).toBe(id1);
+    const { rows } = await pool.query(`SELECT display_name, email FROM app_user WHERE entra_oid='u1'`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].display_name).toBe('U One Renamed');
+    expect(rows[0].email).toBe('u1@b.com');   // preserved via COALESCE
+  });
+
   it('counts and paginates in ref order', async () => {
     for (let i = 0; i < 5; i++) await repo.insert({ ...base, title: `R${i}` });
     expect(await repo.count()).toBe(5);

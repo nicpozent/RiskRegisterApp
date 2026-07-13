@@ -235,10 +235,19 @@ Addressing gaps where the implementation trailed the documented design:
 - **CI de-duplicated.** Triggers scoped to `push:main` + `pull_request` so each
   change runs the pipeline once.
 
+## JIT user provisioning (later round)
+
+- On any write, `RiskService` upserts the acting principal into `app_user`
+  (`ensureUser`, inside the transaction) from token claims — `oid`,
+  `display_name` from `name`, and `email` best-effort from
+  `preferred_username`/`upn`. `app_user.email` is now nullable (migration
+  `0004`) and the worker skips recipients without an email. This lets a
+  first-time user's ownership resolve and lets them be emailed without a prior
+  directory sync. (It provisions the *acting* user; assigning others as
+  owner/stakeholder still needs those rows to exist.)
+
 ## Remaining follow-ups (not in this change)
 
-- **JIT user provisioning:** principals must exist in `app_user` (Entra-synced)
-  for ownership/notification resolution; provision on first token presentation.
 - **Event bus:** replace the DB-polling outbox with a broker when throughput
   demands (the `events.ts` producer is the seam).
 - **Dev-only advisories:** vite/vitest/esbuild (build-time only, not shipped in

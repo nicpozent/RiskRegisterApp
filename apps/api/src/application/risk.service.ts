@@ -45,17 +45,19 @@ export class RiskService {
     }
   }
 
-  async create(input: Omit<Risk,'id'|'ref'>, actorOid: string) {
+  async create(input: Omit<Risk,'id'|'ref'>, actor: Actor) {
     return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);            // JIT-provision the creator
       const created = await repo.insert(input);
-      await audit(tx, actorOid, 'created', 'risk', created.id, null, created);
-      await emit(tx, { type: 'risk.assigned', riskId: created.id, actorOid });
+      await audit(tx, actor.oid, 'created', 'risk', created.id, null, created);
+      await emit(tx, { type: 'risk.assigned', riskId: created.id, actorOid: actor.oid });
       return toView(created);
     });
   }
 
   async update(id: string, patch: Partial<Risk>, actor: Actor) {
     return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);            // JIT-provision the actor before authz
       const before = await repo.findById(id);
       if (!before) return null;
       await this.assertCanModify(repo, actor, before);
@@ -69,6 +71,7 @@ export class RiskService {
   /** Formal residual-risk acceptance (CISO/Admin) — distinct audit + event. */
   async accept(id: string, actor: Actor) {
     return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
       const before = await repo.findById(id);
       if (!before) return null;
       await this.assertCanModify(repo, actor, before);
@@ -82,6 +85,7 @@ export class RiskService {
   /** Map a control to a risk and notify owner + stakeholders. */
   async mapControl(riskId: string, controlId: string, actor: Actor) {
     return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
       const risk = await repo.findById(riskId);
       if (!risk) return null;
       await this.assertCanModify(repo, actor, risk);

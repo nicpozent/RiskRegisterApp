@@ -39,6 +39,15 @@ describe.skipIf(!HAS_DB)('object-level authorization (integration)', () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
+  it('JIT-provisions the acting principal into app_user on write', async () => {
+    const view = await svc.create({ ...baseRisk },
+      { oid: 'jit-oid', name: 'Jit User', email: 'jit@b.com', roles: [Roles.Contributor] });
+    const { rows } = await pool.query(`SELECT display_name, email FROM app_user WHERE entra_oid='jit-oid'`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].email).toBe('jit@b.com');
+    expect(view.ref).toMatch(/^RR-/);
+  });
+
   it('create writes risk + audit + queued notification atomically', async () => {
     const view = await svc.create({ ...baseRisk }, 'creator-oid');
     const a = await pool.query(
