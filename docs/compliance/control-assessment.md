@@ -48,11 +48,12 @@ Status legend: **✔ implemented** (evidence in the repo, CI-verified) ·
 | RUN-1 | Hardened container runtime | ✔ | A.8.9 | PR.PS-01 | — |
 | NET-1 | Network segmentation | ✔ | A.8.20, A.8.22 | PR.IR-01 | — |
 | PRV-1 | Data minimization | ✔ | A.8.10 | — | Art.5(1)(c) |
-| PRV-2 | Subject-rights & retention tooling | ◻ | — | — | Art.15/17, 5(1)(e) |
+| PRV-2 | Subject-rights & retention tooling | ✔ | — | — | Art.15/17/30/33, 5(1)(e) |
 | CRY-2 | Encryption at rest | ◻ | A.8.24 | — | Art.32 |
 | IAM-4 | MFA / Conditional Access | ◻ | A.8.5 | PR.AA-03 | — |
 
-The three planned controls are the same residual items called out in the
-application evaluation; `PRV-2` is delivered by the GDPR/privacy tooling tracked
-separately, at which point its status and evidence are updated here and in
-`controls.json`.
+`PRV-2` (subject-rights & retention tooling) is now implemented — DSAR export,
+append-only-preserving erasure and notification retention via the `privacy` CLI,
+backed by the GDPR artefacts in [`docs/gdpr/`](../gdpr/). The two remaining
+planned controls (`CRY-2` encryption at rest, `IAM-4` MFA / Conditional Access)
+are operator/host and identity-provider actions rather than application code.

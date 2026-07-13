@@ -1,0 +1,63 @@
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { HAS_DB, pool, resetDb, seedUser } from './helpers.js';
+import { RiskRepository } from '../../src/infrastructure/risk.repository.js';
+import { exportSubject, eraseSubject, applyRetention } from '../../src/privacy/service.js';
+
+describe.skipIf(!HAS_DB)('privacy / GDPR tooling (integration)', () => {
+  const repo = new RiskRepository(pool);
+  afterAll(async () => { await pool.end(); });
+  beforeEach(async () => { await resetDb(); });
+
+  it('exports a subject: user, owned risks and their audit events', async () => {
+    const ownerId = await seedUser('subj-oid', 'subject@b.com', 'Subject User');
+    await repo.insert({ title: 'Owned risk', inherentL: 3, inherentI: 3, residualL: 2, residualI: 2,
+      treatment: 'Mitigate', status: 'open', ownerId, stakeholderIds: [], controlIds: [] });
+    await pool.query(
+      `INSERT INTO audit_event (actor_oid, action, entity, entity_id) VALUES ('subj-oid','created','risk','x')`);
+
+    const data = await exportSubject(pool, { email: 'subject@b.com' });
+    expect(data).not.toBeNull();
+    expect(data!.user.entra_oid).toBe('subj-oid');
+    expect(data!.ownedRisks).toHaveLength(1);
+    expect(data!.auditEvents).toHaveLength(1);
+
+    expect(await exportSubject(pool, { oid: 'nobody' })).toBeNull();
+  });
+
+  it('erases directly-identifying fields but keeps the row and audit trail', async () => {
+    await seedUser('erase-oid', 'erase@b.com', 'To Erase');
+    await pool.query(
+      `INSERT INTO audit_event (actor_oid, action, entity, entity_id) VALUES ('erase-oid','modified','risk','y')`);
+
+    const first = await eraseSubject(pool, { oid: 'erase-oid' });
+    expect(first.status).toBe('erased');
+
+    const { rows } = await pool.query('SELECT display_name, email, erased_at FROM app_user WHERE entra_oid = $1', ['erase-oid']);
+    expect(rows[0].email).toBeNull();
+    expect(rows[0].display_name).toBe('Erased subject');
+    expect(rows[0].erased_at).not.toBeNull();
+    // Audit trail is retained (legal-obligation basis).
+    const audit = await pool.query(`SELECT count(*)::int n FROM audit_event WHERE actor_oid = 'erase-oid'`);
+    expect(audit.rows[0].n).toBe(1);
+
+    // Idempotent.
+    expect((await eraseSubject(pool, { oid: 'erase-oid' })).status).toBe('already-erased');
+    expect((await eraseSubject(pool, { oid: 'ghost' })).status).toBe('not-found');
+  });
+
+  it('retention purges old terminal notifications but keeps recent/queued ones', async () => {
+    const ownerId = await seedUser('ret-oid', 'ret@b.com');
+    const risk = await repo.insert({ title: 'R', inherentL: 3, inherentI: 3, residualL: 2, residualI: 2,
+      treatment: 'Mitigate', status: 'open', ownerId, stakeholderIds: [], controlIds: [] });
+    await pool.query(
+      `INSERT INTO notification (risk_id, type, recipients, status, created_at)
+       VALUES ($1,'risk.updated','[]'::jsonb,'sent', now() - interval '200 days'),
+              ($1,'risk.updated','[]'::jsonb,'sent', now()),
+              ($1,'risk.updated','[]'::jsonb,'queued', now() - interval '200 days')`, [risk.id]);
+
+    const res = await applyRetention(pool, { notificationsDays: 90 });
+    expect(res.notificationsDeleted).toBe(1); // only the old 'sent' one
+    const remaining = await pool.query('SELECT count(*)::int n FROM notification');
+    expect(remaining.rows[0].n).toBe(2);
+  });
+});
