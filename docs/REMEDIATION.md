@@ -270,6 +270,21 @@ Addressing gaps where the implementation trailed the documented design:
   clobbering a concurrent edit. Absent `If-Match` → last-write-wins
   (backward-compatible). Atomic check-and-set (`WHERE version = expected`).
 
+## Observability (later round)
+
+- **Prometheus metrics** — `/metrics` (internal, not published through the edge)
+  exposes default process/runtime metrics plus an `http_request_duration_seconds`
+  histogram labelled by method/route/status (route = router mount, so no per-id
+  cardinality blow-up).
+- **Request-ID correlation** — `pino-http` honours an inbound `X-Request-Id`
+  (from the edge) or mints one, tags every log line with it, and echoes it in the
+  response (exposed via CORS) so a client error can be traced to server logs.
+- **Tracing (next step):** OpenTelemetry with an OTLP exporter, opt-in via env,
+  plugging into whatever backend you run (Tempo/Jaeger/SaaS). The request id is
+  the correlation seam. Not added here to avoid shipping heavy, unverified deps.
+- **Alerting** lives in your monitoring stack as Prometheus rules over the
+  metrics above. Worker metrics/health endpoint is a small follow-up.
+
 ## Remaining follow-ups (not in this change)
 
 - **Event bus:** replace the DB-polling outbox with a broker when throughput

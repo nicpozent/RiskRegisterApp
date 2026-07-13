@@ -41,6 +41,16 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     await request(app).get('/risks').expect(401);
   });
 
+  it('exposes Prometheus metrics at /metrics', async () => {
+    const res = await request(app).get('/metrics').expect(200);
+    expect(res.text).toMatch(/http_request_duration_seconds|process_cpu_seconds_total/);
+  });
+
+  it('sets an X-Request-Id response header for correlation', async () => {
+    const res = await request(app).get('/healthz').expect(200);
+    expect(res.headers['x-request-id']).toBeTruthy();
+  });
+
   it('allows a read for any recognized role', async () => {
     const res = await request(app).get('/risks').set('Authorization', bearer(viewer)).expect(200);
     expect(Array.isArray(res.body)).toBe(true);
