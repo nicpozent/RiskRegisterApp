@@ -166,6 +166,14 @@ export class RiskRepository {
       [p.oid, p.name || p.oid, p.email ?? null]);
     return rows[0].id;
   }
+  /** Controls currently mapped to a risk (joined to the catalogue). */
+  async controlsFor(riskId: string) {
+    const { rows } = await this.db.query(
+      `SELECT c.id, c.framework, c.ref, c.title, c.grp as "group", c.help, c.is_custom as "isCustom"
+         FROM risk_control rc JOIN control c ON c.id = rc.control_id
+        WHERE rc.risk_id = $1 ORDER BY c.framework, c.ref`, [riskId]);
+    return rows;
+  }
   async linkControl(riskId: string, controlId: string) {
     await this.db.query(
       `INSERT INTO risk_control (risk_id, control_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,

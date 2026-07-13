@@ -63,6 +63,12 @@ risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(asy
   res.json(accepted);
 }));
 
+risks.get('/:id/controls', requireRole(...AnyRole), asyncHandler(async (req, res) => {
+  const list = await svc.controls(req.params.id);
+  if (!list) return res.status(404).json({ error: 'not found' });
+  res.json(list);
+}));
+
 risks.post('/:id/controls/:controlId', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
   const ok = await svc.mapControl(req.params.id, req.params.controlId, req.user!);
   if (!ok) return res.status(404).json({ error: 'not found' });

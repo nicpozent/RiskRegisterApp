@@ -317,8 +317,21 @@ Addressing gaps where the implementation trailed the documented design:
   service maps raw scores → bands through the single-source domain `band()`
   thresholds, so the SQL never duplicates the band boundaries. Covered by an
   integration test asserting band/status/treatment tallies.
-- **Later phases (backlog):** control library, treatment-action workflow (needs
-  new API), admin, reporting/evidence export (needs new API).
+## SPA product UI — Phase 3 (later round)
+
+- **Control library.** New view at `#/controls` (nav: Dashboard · Register ·
+  Controls) over the existing `GET /frameworks` and `GET /controls` endpoints:
+  framework filter (with per-framework counts), ref/title search, pagination
+  (`X-Total-Count`), and each control's mapped-to-risk count.
+- **Risk ↔ control mapping.** The risk detail page gains a Controls panel that
+  lists the mapped controls and a search-and-map picker (calls the existing
+  `POST /risks/:id/controls/:controlId`). Backed by a **new
+  `GET /risks/:id/controls`** endpoint (joins `risk_control` → `control`;
+  404 for an unknown risk) so mapped controls render with their ref/title/
+  framework rather than opaque ids. Covered by integration tests (map-then-list,
+  and 404 for a missing risk).
+- **Later phases (backlog):** treatment-action workflow (needs new API), admin,
+  reporting/evidence export (needs new API).
 
 ## Remaining follow-ups (not in this change)
 

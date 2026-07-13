@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 export type Route =
   | { name: 'register' }
   | { name: 'dashboard' }
+  | { name: 'controls' }
   | { name: 'new' }
   | { name: 'risk'; id: string };
 
 function parse(hash: string): Route {
   const path = hash.replace(/^#/, '') || '/';
   if (path === '/dashboard') return { name: 'dashboard' };
+  if (path === '/controls') return { name: 'controls' };
   if (path === '/new') return { name: 'new' };
   const m = path.match(/^\/risk\/([^/]+)$/);
   if (m) return { name: 'risk', id: decodeURIComponent(m[1]) };

@@ -130,6 +130,30 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     expect(res.body.byStatus.monitored).toBe(1);
   });
 
+  it('maps a control to a risk and lists it at GET /risks/:id/controls', async () => {
+    await pool.query(`INSERT INTO framework (id, name) VALUES ('iso27001','ISO 27001')`);
+    const ctrl = await pool.query(
+      `INSERT INTO control (framework, ref, title) VALUES ('iso27001','A.8.24','Use of cryptography') RETURNING id`);
+    const controlId = ctrl.rows[0].id;
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const id = created.body.id;
+
+    // Empty before mapping.
+    const before = await request(app).get(`/risks/${id}/controls`).set('Authorization', bearer(viewer)).expect(200);
+    expect(before.body).toHaveLength(0);
+
+    await request(app).post(`/risks/${id}/controls/${controlId}`).set('Authorization', bearer(admin)).expect(204);
+
+    const after = await request(app).get(`/risks/${id}/controls`).set('Authorization', bearer(viewer)).expect(200);
+    expect(after.body).toHaveLength(1);
+    expect(after.body[0]).toMatchObject({ ref: 'A.8.24', framework: 'iso27001' });
+  });
+
+  it('returns 404 listing controls for an unknown risk', async () => {
+    await request(app).get('/risks/00000000-0000-0000-0000-000000000000/controls')
+      .set('Authorization', bearer(viewer)).expect(404);
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))

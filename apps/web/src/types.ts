@@ -34,6 +34,16 @@ export interface RiskSummary {
   byTreatment: Record<string, number>;
 }
 
+// Control catalogue (mirrors API control routes).
+export interface FrameworkView {
+  id: string; short: string; name: string; authority: string;
+  kind: string; region: string; description: string; count: number; mapped: number;
+}
+export interface ControlView {
+  id: string; framework: string; ref: string; title: string;
+  group?: string; help?: string; isCustom: boolean; mappedCount?: number;
+}
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =
