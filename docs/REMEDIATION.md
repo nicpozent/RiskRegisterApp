@@ -228,6 +228,7 @@ Addressing gaps where the implementation trailed the documented design:
 - **N+1 fixed / pagination added.** `RiskRepository.findAll` batch-hydrates
   controls & stakeholders in 2 queries (was 2 per row); `GET /risks` takes
   `?limit`/`?offset` with the total in `X-Total-Count` (body stays an array).
+  `GET /controls` is likewise paginated (replacing its hard `LIMIT 1000`).
 - **Transactional writes.** `RiskService` now runs each mutation + its audit row
   + emitted event in a single `BEGIN/COMMIT` (repo/audit/emit share one
   `Queryable` client), so a crash can't persist a change without its audit

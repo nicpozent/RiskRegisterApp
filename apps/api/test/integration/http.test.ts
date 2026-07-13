@@ -98,6 +98,16 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
       .send({ title: 'Unconditional' }).expect(200);
   });
 
+  it('paginates GET /controls with X-Total-Count', async () => {
+    await pool.query(`INSERT INTO framework (id, name) VALUES ('iso27001','ISO 27001')`);
+    for (const ref of ['A.5.1', 'A.5.2', 'A.5.3']) {
+      await pool.query(`INSERT INTO control (framework, ref, title) VALUES ('iso27001',$1,$1)`, [ref]);
+    }
+    const res = await request(app).get('/controls?limit=2&offset=0').set('Authorization', bearer(viewer)).expect(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.headers['x-total-count']).toBe('3');
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))
