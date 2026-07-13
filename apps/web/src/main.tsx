@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MsalProvider } from '@azure/msal-react';
 import { pca } from './authConfig.js';
 import App from './App.js';
+import './styles.css';
 
 // This SPA is the polished prototype's production shell. The full UI
 // (dashboards, register, control library, admin) is in the design prototype.

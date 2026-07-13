@@ -285,6 +285,27 @@ Addressing gaps where the implementation trailed the documented design:
 - **Alerting** lives in your monitoring stack as Prometheus rules over the
   metrics above. Worker metrics/health endpoint is a small follow-up.
 
+## SPA product UI — Phase 1 (later round)
+
+- **Functional Risk Register UI.** Replaced the placeholder shell with a real,
+  dependency-light React app (no new UI library; a ~30-line hash router instead
+  of `react-router`):
+  - `RiskRegister` — paginated table (20/page) driven by `Risks.list`, reading
+    the total from `X-Total-Count`; Previous/Next pager; band badges.
+  - `NewRisk` / `RiskForm` — create/edit form mirroring the API Zod schema
+    (title, description, category, 1–5 likelihood/impact scales, treatment,
+    editable status, SLE/ARO/next-review). `status: 'accepted'` is never
+    user-selectable (that path goes through the accept action).
+  - `RiskDetail` — read view plus edit with **optimistic concurrency**: it sends
+    `If-Match: <version>`, and on a **409** surfaces "changed by someone else"
+    then reloads the winning version so the next save succeeds. Also exposes the
+    Admin/CISO "Accept residual" action.
+  - `App` — Entra-gated shell (`AuthenticatedTemplate`/`UnauthenticatedTemplate`)
+    wiring the router; `api.ts` attaches a fresh MSAL access token per call and
+    raises `ConflictError` on 409.
+- **Later phases (backlog):** dashboards/charts, control library, treatment-action
+  workflow (needs new API), admin, reporting/evidence export (needs new API).
+
 ## Remaining follow-ups (not in this change)
 
 - **Event bus:** replace the DB-polling outbox with a broker when throughput
