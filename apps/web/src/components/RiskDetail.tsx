@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Risks, ConflictError } from '../api.js';
+import { Risks, Reports, ConflictError } from '../api.js';
+import { downloadBlob } from '../download.js';
 import { navigate } from '../router.js';
 import type { RiskInput, RiskView } from '../types.js';
 import { RiskForm } from './RiskForm.js';
@@ -42,6 +43,14 @@ export function RiskDetail({ id }: { id: string }) {
     }
   }
 
+  async function exportEvidence() {
+    if (!risk) return;
+    setError(null);
+    try {
+      downloadBlob(await Reports.evidence(risk.id), `evidence-${risk.ref}.json`);
+    } catch (e) { setError(String((e as Error).message ?? e)); }
+  }
+
   async function accept() {
     setBusy(true); setError(null); setNotice(null);
     try {
@@ -81,6 +90,7 @@ export function RiskDetail({ id }: { id: string }) {
         <div className="row">
           <button onClick={() => setEditing(true)}>Edit</button>
           {risk.status !== 'accepted' && <button onClick={accept} disabled={busy}>Accept residual</button>}
+          <button onClick={exportEvidence} disabled={busy}>Export evidence</button>
           <button onClick={() => navigate('/')}>Back</button>
         </div>
       </div>

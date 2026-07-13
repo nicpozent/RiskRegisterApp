@@ -364,7 +364,24 @@ Addressing gaps where the implementation trailed the documented design:
   Both reject other roles with 403. Covered by integration tests
   (Auditor allowed / Viewer 403 on the trail; Admin allowed / Contributor 403 on
   the directory).
-- **Later phases (backlog):** reporting/evidence export (needs new API).
+- **Later phases (backlog):** reporting/evidence export (Phase 6, below).
+
+## SPA product UI — Phase 6 (later round)
+
+- **Reporting & evidence export.** New `Reports` view plus per-risk export:
+  - **Register CSV** (`GET /reports/register.csv`) — the whole register with
+    computed fields (scores, bands, ALE, reduction). Server-side, RFC-4180 CSV
+    escaping (commas/quotes/newlines quoted correctly).
+  - **Evidence pack** (`GET /reports/risk/:id`) — a consolidated JSON of the
+    risk view + mapped controls + treatment actions + a `generatedAt` stamp,
+    exported from the risk detail page ("Export evidence"). 404 for unknown risk.
+- Both require an authenticated recognized role. The web client fetches with the
+  bearer token and triggers a Blob download (a plain `<a href>` can't carry the
+  auth header). Covered by integration tests (CSV header row + quoted comma;
+  evidence-pack shape + 404).
+- **SPA phases 1–6 complete.** The functional product now spans register CRUD
+  with optimistic concurrency, dashboard, control library + mapping, treatment
+  workflow, admin/audit console, and reporting/export.
 
 ## Remaining follow-ups (not in this change)
 

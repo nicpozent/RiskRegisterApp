@@ -11,6 +11,7 @@ import { risks } from './routes/risks.js';
 import { controls } from './routes/controls.js';
 import { frameworks } from './routes/frameworks.js';
 import { admin } from './routes/admin.js';
+import { reports } from './routes/reports.js';
 import { pool } from '../infrastructure/db.js';
 import { HttpError } from '../application/errors.js';
 
@@ -49,6 +50,7 @@ export function buildApp() {
   app.use('/controls', authenticate, controls);
   app.use('/frameworks', authenticate, frameworks);
   app.use('/admin', authenticate, admin);
+  app.use('/reports', authenticate, reports);
 
   app.use((_req, res) => res.status(404).json({ error: 'not found' }));
 
