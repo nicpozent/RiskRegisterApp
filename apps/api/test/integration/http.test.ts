@@ -300,6 +300,36 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
       .send({ title: 'x' }).expect(403);
   });
 
+  it('in-app feed: a risk event notifies the owner, who can list and mark read', async () => {
+    const ownerId = await seedUser('owner-oid', 'owner@b.com', 'Owner');
+    const stakeId = await seedUser('stake-oid', 'stake@b.com', 'Stakeholder');
+    const risk = await repo.insert({ ...validBody, ownerId, status: 'open', stakeholderIds: [], controlIds: [] });
+    await pool.query('INSERT INTO risk_stakeholder (risk_id, user_id) VALUES ($1,$2)', [risk.id, stakeId]);
+
+    // An elevated edit raises risk.updated → fans out to owner + stakeholder.
+    await request(app).patch(`/risks/${risk.id}`).set('Authorization', bearer(admin))
+      .send({ status: 'monitored' }).expect(200);
+
+    const owner = { oid: 'owner-oid', roles: ['Viewer'] };
+    const feed = await request(app).get('/notifications').set('Authorization', bearer(owner)).expect(200);
+    expect(feed.body.unread).toBe(1);
+    expect(feed.body.items[0]).toMatchObject({ riskRef: risk.ref, type: 'risk.updated' });
+
+    const notifId = feed.body.items[0].id;
+    await request(app).post(`/notifications/${notifId}/read`).set('Authorization', bearer(owner)).expect(204);
+    const after = await request(app).get('/notifications').set('Authorization', bearer(owner)).expect(200);
+    expect(after.body.unread).toBe(0);
+
+    // The stakeholder has their own unread copy.
+    const stakeFeed = await request(app).get('/notifications').set('Authorization', bearer({ oid: 'stake-oid', roles: ['Viewer'] })).expect(200);
+    expect(stakeFeed.body.unread).toBe(1);
+  });
+
+  it('in-app feed: an unprovisioned principal has an empty feed', async () => {
+    const res = await request(app).get('/notifications').set('Authorization', bearer({ oid: 'ghost-oid', roles: ['Viewer'] })).expect(200);
+    expect(res.body).toEqual({ items: [], unread: 0 });
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))

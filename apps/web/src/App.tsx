@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import { loginRequest } from './authConfig.js';
 import { useRoute, navigate } from './router.js';
+import { Notifications as NotificationsApi } from './api.js';
 import { RiskRegister } from './components/RiskRegister.js';
 import { RiskDetail } from './components/RiskDetail.js';
 import { NewRisk } from './components/NewRisk.js';
@@ -8,6 +10,7 @@ import { Dashboard } from './components/Dashboard.js';
 import { ControlLibrary } from './components/ControlLibrary.js';
 import { Admin } from './components/Admin.js';
 import { Reports } from './components/Reports.js';
+import { Notifications } from './components/Notifications.js';
 import { ADMIN_ROLES } from './types.js';
 
 export default function App() {
@@ -18,6 +21,14 @@ export default function App() {
   // (the API still enforces authorization server-side).
   const roles = (account?.idTokenClaims as { roles?: string[] } | undefined)?.roles ?? [];
   const isAdmin = roles.some((r) => ADMIN_ROLES.includes(r));
+
+  // Unread notification count for the nav badge; refreshed on navigation.
+  const [unread, setUnread] = useState(0);
+  const signedIn = accounts.length > 0;
+  const refreshUnread = () => {
+    if (signedIn) NotificationsApi.list().then((r) => setUnread(r.unread)).catch(() => {});
+  };
+  useEffect(refreshUnread, [route, signedIn]);
 
   return (
     <>
@@ -32,6 +43,9 @@ export default function App() {
               <a href="#/" className={route.name === 'register' ? 'active' : ''}>Register</a>
               <a href="#/controls" className={route.name === 'controls' ? 'active' : ''}>Controls</a>
               <a href="#/reports" className={route.name === 'reports' ? 'active' : ''}>Reports</a>
+              <a href="#/notifications" className={route.name === 'notifications' ? 'active' : ''}>
+                Notifications{unread > 0 && <span className="badge-count">{unread}</span>}
+              </a>
               {isAdmin && <a href="#/admin" className={route.name === 'admin' ? 'active' : ''}>Admin</a>}
             </nav>
             <span className="who">{account?.name ?? account?.username}</span>
@@ -55,6 +69,7 @@ export default function App() {
           {route.name === 'dashboard' && <Dashboard />}
           {route.name === 'controls' && <ControlLibrary />}
           {route.name === 'reports' && <Reports />}
+          {route.name === 'notifications' && <Notifications onChange={refreshUnread} />}
           {route.name === 'admin' && <Admin />}
           {route.name === 'new' && <NewRisk />}
           {route.name === 'risk' && <RiskDetail id={route.id} />}

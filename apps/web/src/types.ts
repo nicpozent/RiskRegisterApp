@@ -84,6 +84,12 @@ export interface ChangeRequest {
 }
 export const ELEVATED_ROLES = ['Administrator', 'CISO.RiskManager'];
 
+// In-app notification feed (mirrors API /notifications).
+export interface UserNotification {
+  id: string; type: string; riskId?: string; riskRef?: string;
+  summary?: string; readAt?: string; createdAt: string;
+}
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =

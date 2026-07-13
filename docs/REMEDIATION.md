@@ -6,6 +6,19 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## In-app notification feed (later round)
+
+- **Per-user notification inbox** beyond the email outbox. New `user_notification`
+  table (migration `0011`); `emit()` now fans out to the risk's owner +
+  stakeholders **transactionally** with the change (in addition to queuing the
+  email). API under `/notifications`: `GET` (the signed-in user's feed + unread
+  count), `POST /:id/read`, `POST /read-all` — all scoped to the caller's own
+  rows (resolved from their Entra oid). Covered by integration tests
+  (event → owner & stakeholder each get an unread item; mark-read; unprovisioned
+  principal → empty feed).
+- **Web:** a Notifications view with an **unread badge in the nav**; clicking an
+  item marks it read and opens the risk; "Mark all read" clears the badge.
+
 ## Maker-checker approval workflow (later round)
 
 - **Segregation-of-duties approvals for risk changes.** A proposed edit is
