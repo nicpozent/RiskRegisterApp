@@ -1,5 +1,5 @@
 import { pca, loginRequest } from './authConfig.js';
-import type { RiskView, RiskInput, RiskSummary, FrameworkView, ControlView } from './types.js';
+import type { RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction } from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
@@ -54,6 +54,15 @@ export const Risks = {
   },
   async mapControl(id: string, controlId: string): Promise<void> {
     await request(`/risks/${id}/controls/${controlId}`, { method: 'POST' });
+  },
+  async actions(id: string): Promise<TreatmentAction[]> {
+    return (await request(`/risks/${id}/actions`)).json();
+  },
+  async addAction(id: string, body: { description: string; dueDate?: string; status?: string }): Promise<TreatmentAction> {
+    return (await request(`/risks/${id}/actions`, { method: 'POST', body: JSON.stringify(body) })).json();
+  },
+  async updateAction(id: string, actionId: string, patch: { description?: string; dueDate?: string; status?: string }): Promise<TreatmentAction> {
+    return (await request(`/risks/${id}/actions/${actionId}`, { method: 'PATCH', body: JSON.stringify(patch) })).json();
   },
 };
 

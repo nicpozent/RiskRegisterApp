@@ -330,8 +330,25 @@ Addressing gaps where the implementation trailed the documented design:
   404 for an unknown risk) so mapped controls render with their ref/title/
   framework rather than opaque ids. Covered by integration tests (map-then-list,
   and 404 for a missing risk).
-- **Later phases (backlog):** treatment-action workflow (needs new API), admin,
-  reporting/evidence export (needs new API).
+- **Later phases (backlog):** admin, reporting/evidence export (needs new API).
+
+## SPA product UI — Phase 4 (later round)
+
+- **Treatment-action workflow.** Each risk now carries a treatment plan: tracked
+  actions with a description, due date and lifecycle status
+  (`open → in_progress → done`, plus `cancelled`). The risk detail page gains a
+  Treatment-plan panel (open-count, add action, change status inline).
+- **New API endpoints** (all object-level authz — only owners/stakeholders or an
+  elevated role may write; any recognized role may read):
+  - `GET /risks/:id/actions` — list (404 for unknown risk).
+  - `POST /risks/:id/actions` — create (Zod-validated; status enum).
+  - `PATCH /risks/:id/actions/:actionId` — update (scoped to the risk).
+  Writes run inside the existing single-transaction `withTx` (mutation + audit +
+  event together). Backed by the `treatment_action` table (present since 0001);
+  migration `0007` adds `created_at`/`updated_at` for ordering and a `risk_id`
+  index. Covered by integration tests (add→list→complete, invalid-status 400,
+  unknown-risk 404).
+- **Later phases (backlog):** admin, reporting/evidence export (needs new API).
 
 ## Remaining follow-ups (not in this change)
 

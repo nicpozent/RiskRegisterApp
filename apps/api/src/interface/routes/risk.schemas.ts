@@ -19,6 +19,15 @@ export const createSchema = z.object({
 // Partial of create for PATCH, with status narrowed to non-acceptance values.
 export const updateSchema = createSchema.partial().extend({ status: patchableStatus.optional() });
 
+// Treatment actions (risk-scoped tasks).
+export const actionCreateSchema = z.object({
+  description: z.string().min(3),
+  ownerId: z.string().uuid().optional(),
+  dueDate: z.string().optional(),
+  status: z.enum(['open', 'in_progress', 'done', 'cancelled']).optional(),
+});
+export const actionUpdateSchema = actionCreateSchema.partial();
+
 // Pagination for GET /risks. Sane defaults + a hard cap so a client can't ask
 // for an unbounded page.
 export const listQuerySchema = z.object({

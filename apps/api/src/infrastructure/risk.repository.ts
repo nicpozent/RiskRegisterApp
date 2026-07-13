@@ -179,6 +179,39 @@ export class RiskRepository {
       `INSERT INTO risk_control (risk_id, control_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
       [riskId, controlId]);
   }
+  // ---- Treatment actions (risk-scoped tasks) ----
+  private static readonly ACTION_COLS = `id, risk_id as "riskId", description, owner_id as "ownerId",
+    due_date as "dueDate", status, created_at as "createdAt", updated_at as "updatedAt"`;
+
+  async actionsFor(riskId: string) {
+    const { rows } = await this.db.query(
+      `SELECT ${RiskRepository.ACTION_COLS} FROM treatment_action
+        WHERE risk_id = $1 ORDER BY created_at`, [riskId]);
+    return rows;
+  }
+  async insertAction(riskId: string, a: { description: string; ownerId?: string; dueDate?: string; status?: string }) {
+    const { rows } = await this.db.query(
+      `INSERT INTO treatment_action (risk_id, description, owner_id, due_date, status)
+         VALUES ($1,$2,$3,$4,COALESCE($5,'open')) RETURNING ${RiskRepository.ACTION_COLS}`,
+      [riskId, a.description, a.ownerId ?? null, a.dueDate ?? null, a.status ?? null]);
+    return rows[0];
+  }
+  /** Patch an action scoped to its risk (whitelisted fields). Null if not found. */
+  async updateAction(riskId: string, actionId: string, p: { description?: string; ownerId?: string; dueDate?: string; status?: string }) {
+    const map: Record<string, string> = { description:'description', ownerId:'owner_id', dueDate:'due_date', status:'status' };
+    const vals: unknown[] = []; const sets: string[] = [];
+    for (const [k, col] of Object.entries(map)) {
+      if (k in p) { vals.push((p as Record<string, unknown>)[k]); sets.push(`${col}=$${vals.length}`); }
+    }
+    vals.push(riskId); const riskParam = vals.length;
+    vals.push(actionId); const idParam = vals.length;
+    const assignments = [...sets, 'updated_at = now()'].join(', ');
+    const { rows } = await this.db.query(
+      `UPDATE treatment_action SET ${assignments}
+        WHERE risk_id=$${riskParam} AND id=$${idParam} RETURNING ${RiskRepository.ACTION_COLS}`, vals);
+    return rows[0] ?? null;
+  }
+
   private async nextRef(): Promise<string> {
     // Atomic — no race or reuse under concurrent inserts (see migration 0002).
     const { rows } = await this.db.query(`SELECT nextval('risk_ref_seq')::int n`);
