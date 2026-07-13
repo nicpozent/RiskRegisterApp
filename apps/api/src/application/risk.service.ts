@@ -52,6 +52,13 @@ export class RiskService {
     };
   }
 
+  /** Controls mapped to a risk (null if the risk doesn't exist). */
+  async controls(id: string) {
+    const risk = await this.reads.findById(id);
+    if (!risk) return null;
+    return this.reads.controlsFor(id);
+  }
+
   /**
    * Run a mutation, its audit row, and its emitted event in ONE transaction, so
    * a crash can never leave a business change without its audit entry (or vice

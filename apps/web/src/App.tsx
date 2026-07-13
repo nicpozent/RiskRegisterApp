@@ -5,6 +5,7 @@ import { RiskRegister } from './components/RiskRegister.js';
 import { RiskDetail } from './components/RiskDetail.js';
 import { NewRisk } from './components/NewRisk.js';
 import { Dashboard } from './components/Dashboard.js';
+import { ControlLibrary } from './components/ControlLibrary.js';
 
 export default function App() {
   const { instance, accounts } = useMsal();
@@ -22,6 +23,7 @@ export default function App() {
             <nav className="row">
               <a href="#/dashboard" className={route.name === 'dashboard' ? 'active' : ''}>Dashboard</a>
               <a href="#/" className={route.name === 'register' ? 'active' : ''}>Register</a>
+              <a href="#/controls" className={route.name === 'controls' ? 'active' : ''}>Controls</a>
             </nav>
             <span className="who">{account?.name ?? account?.username}</span>
             <button onClick={() => instance.logoutRedirect()}>Sign out</button>
@@ -42,6 +44,7 @@ export default function App() {
         <AuthenticatedTemplate>
           {route.name === 'register' && <RiskRegister />}
           {route.name === 'dashboard' && <Dashboard />}
+          {route.name === 'controls' && <ControlLibrary />}
           {route.name === 'new' && <NewRisk />}
           {route.name === 'risk' && <RiskDetail id={route.id} />}
         </AuthenticatedTemplate>

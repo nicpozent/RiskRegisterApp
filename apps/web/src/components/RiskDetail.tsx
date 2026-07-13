@@ -3,6 +3,7 @@ import { Risks, ConflictError } from '../api.js';
 import { navigate } from '../router.js';
 import type { RiskInput, RiskView } from '../types.js';
 import { RiskForm } from './RiskForm.js';
+import { RiskControls } from './RiskControls.js';
 
 const money = (n?: number) => (n == null ? '—' : `£${n.toLocaleString()}`);
 
@@ -101,6 +102,8 @@ export function RiskDetail({ id }: { id: string }) {
           <dt>Version</dt><dd className="muted">{risk.version}</dd>
         </dl>
       </div>
+
+      <RiskControls riskId={risk.id} />
     </div>
   );
 }
