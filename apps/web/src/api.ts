@@ -1,7 +1,7 @@
 import { pca, loginRequest } from './authConfig.js';
 import type {
   RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction,
-  AuditEvent, DirectoryUser, EvidenceMeta, ChangeRequest,
+  AuditEvent, DirectoryUser, EvidenceMeta, ChangeRequest, UserNotification,
 } from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -113,6 +113,18 @@ export const Admin = {
   },
   async users(): Promise<DirectoryUser[]> {
     return (await request('/admin/users')).json();
+  },
+};
+
+export const Notifications = {
+  async list(): Promise<{ items: UserNotification[]; unread: number }> {
+    return (await request('/notifications')).json();
+  },
+  async markRead(id: string): Promise<void> {
+    await request(`/notifications/${id}/read`, { method: 'POST' });
+  },
+  async markAllRead(): Promise<void> {
+    await request('/notifications/read-all', { method: 'POST' });
   },
 };
 

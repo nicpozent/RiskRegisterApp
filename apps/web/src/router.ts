@@ -6,6 +6,7 @@ export type Route =
   | { name: 'dashboard' }
   | { name: 'controls' }
   | { name: 'reports' }
+  | { name: 'notifications' }
   | { name: 'admin' }
   | { name: 'new' }
   | { name: 'risk'; id: string };
@@ -15,6 +16,7 @@ function parse(hash: string): Route {
   if (path === '/dashboard') return { name: 'dashboard' };
   if (path === '/controls') return { name: 'controls' };
   if (path === '/reports') return { name: 'reports' };
+  if (path === '/notifications') return { name: 'notifications' };
   if (path === '/admin') return { name: 'admin' };
   if (path === '/new') return { name: 'new' };
   const m = path.match(/^\/risk\/([^/]+)$/);

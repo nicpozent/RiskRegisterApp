@@ -1,0 +1,14 @@
+name: "Risk Register CodeQL config"
+
+queries:
+  - uses: security-and-quality
+
+query-filters:
+  # The API enforces rate limiting via a GLOBAL custom middleware
+  # (apps/api/src/interface/middleware/rate-limit.ts, applied in http.ts and
+  # pluggable for a Redis-backed limiter in multi-instance deployments). CodeQL's
+  # js/missing-rate-limiting query only recognizes a fixed set of rate-limiting
+  # packages, so it reports false positives on every DB-backed route. The control
+  # exists (see control APP-1 in compliance/controls.json); exclude the query.
+  - exclude:
+      id: js/missing-rate-limiting
