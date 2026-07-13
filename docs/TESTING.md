@@ -110,6 +110,19 @@ than counted as uncovered. HTML report in `apps/api/coverage/` (gitignored).
 - **Graceful skip:** Docker-dependent runners exit `75` (treated as *skipped*) so
   they never fail a Docker-less environment.
 
+## Load / performance smoke
+
+`scripts/test/perf.sh` runs a short throughput/latency check against a running
+API using `autocannon` (via `npx`, no committed dependency) — a sanity smoke,
+not a benchmark, and intentionally non-gating:
+
+```bash
+PERF_BASE=http://localhost:8080 PERF_TOKEN=<bearer> ./scripts/test/perf.sh
+```
+
+Without `PERF_TOKEN` it exercises the unauthenticated `/healthz` path. Point it
+at a stack brought up by `smoke.sh` / docker-compose.
+
 ## CI
 
 `.github/workflows/ci.yml` runs **static + unit + prod audit** on every push/PR.

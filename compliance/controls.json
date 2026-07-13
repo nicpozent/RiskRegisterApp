@@ -198,6 +198,17 @@
       "evidence": ["deploy/k8s/networkpolicy.yaml"]
     },
     {
+      "id": "DR-1",
+      "title": "Backup and disaster recovery",
+      "statement": "Nightly logical backups (pg_dump CronJob) plus scripted backup/restore and a rehearsed DR runbook with RPO/RTO targets; managed PITR is the target for finer recovery.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.13", "A.5.29", "A.5.30"],
+        "nistCsf": ["RC.RP-01", "PR.DS-11"]
+      },
+      "evidence": ["scripts/ops/backup.sh", "scripts/ops/restore.sh", "deploy/k8s/backup-cronjob.yaml", "docs/ops/dr-runbook.md"]
+    },
+    {
       "id": "PRV-1",
       "title": "Data minimization",
       "statement": "Only the object id, display name and email are provisioned from token claims; no broader directory data is stored.",
