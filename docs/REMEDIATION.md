@@ -303,8 +303,22 @@ Addressing gaps where the implementation trailed the documented design:
   - `App` — Entra-gated shell (`AuthenticatedTemplate`/`UnauthenticatedTemplate`)
     wiring the router; `api.ts` attaches a fresh MSAL access token per call and
     raises `ConflictError` on 409.
-- **Later phases (backlog):** dashboards/charts, control library, treatment-action
-  workflow (needs new API), admin, reporting/evidence export (needs new API).
+## SPA product UI — Phase 2 (later round)
+
+- **Dashboard.** New Entra-gated overview at `#/dashboard` with a nav switch
+  between Dashboard and Register:
+  - KPI cards: total risks, inherent/residual ALE per year, and ALE reduction %.
+  - Inherent vs residual **risk-by-band** distributions and **by-status** /
+    **by-treatment** breakdowns, drawn as dependency-light CSS bars (no charting
+    library added).
+- **`GET /risks/summary` API.** Aggregates are computed in the database
+  (`GROUP BY` on score/status/treatment plus `SUM(sle*aro)` ALE totals) so the
+  endpoint stays cheap as the register grows — no client-side full scan. The
+  service maps raw scores → bands through the single-source domain `band()`
+  thresholds, so the SQL never duplicates the band boundaries. Covered by an
+  integration test asserting band/status/treatment tallies.
+- **Later phases (backlog):** control library, treatment-action workflow (needs
+  new API), admin, reporting/evidence export (needs new API).
 
 ## Remaining follow-ups (not in this change)
 
