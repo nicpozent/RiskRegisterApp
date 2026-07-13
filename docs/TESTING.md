@@ -110,18 +110,33 @@ than counted as uncovered. HTML report in `apps/api/coverage/` (gitignored).
 - **Graceful skip:** Docker-dependent runners exit `75` (treated as *skipped*) so
   they never fail a Docker-less environment.
 
-## Load / performance smoke
+## Browser e2e (Playwright)
 
-`scripts/test/perf.sh` runs a short throughput/latency check against a running
-API using `autocannon` (via `npx`, no committed dependency) — a sanity smoke,
-not a benchmark, and intentionally non-gating:
+`apps/web/e2e/` holds real-browser tests driven by Playwright; run with
+`npm run e2e -w @rr/web`. The config builds and previews the SPA, then loads it
+in Chromium and asserts the unauthenticated shell (title, sign-in control, no
+authenticated nav). The authenticated flow needs a live Entra tenant, so
+component/interaction behaviour is covered by the Vitest/RTL suite and the
+browser layer covers the shell. CI runs it as the **e2e (playwright)** job
+(installs Chromium via `playwright install`); locally, set
+`PW_CHROMIUM_PATH` to a pre-provisioned browser to skip the download.
+
+## Load: smoke and benchmark
+
+- `scripts/test/perf.sh` — a short throughput/latency **smoke** (autocannon via
+  `npx`), non-gating.
+- `scripts/test/benchmark.sh` — a **sustained** benchmark (default 50 conns ×
+  30s) that reports p50/p99 latency and req/s and can **gate on thresholds**
+  when `PERF_MAX_P99_MS` / `PERF_MIN_RPS` are set:
 
 ```bash
-PERF_BASE=http://localhost:8080 PERF_TOKEN=<bearer> ./scripts/test/perf.sh
+PERF_BASE=http://localhost:8080 PERF_DURATION=30 PERF_CONNECTIONS=50 \
+  PERF_MAX_P99_MS=250 PERF_MIN_RPS=200 ./scripts/test/benchmark.sh
 ```
 
-Without `PERF_TOKEN` it exercises the unauthenticated `/healthz` path. Point it
-at a stack brought up by `smoke.sh` / docker-compose.
+Both default to the unauthenticated `/healthz` path; set `PERF_TOKEN` and
+`PERF_PATH=/risks` for an authenticated run. Point them at a stack brought up by
+`smoke.sh` / docker-compose.
 
 ## CI
 

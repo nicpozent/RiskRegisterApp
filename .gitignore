@@ -1,5 +1,10 @@
 node_modules/
 dist/
+
+# Playwright e2e artifacts
+test-results/
+playwright-report/
+.playwright/
 build/
 .env
 *.local
