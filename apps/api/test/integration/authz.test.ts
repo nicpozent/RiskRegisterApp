@@ -49,7 +49,7 @@ describe.skipIf(!HAS_DB)('object-level authorization (integration)', () => {
   });
 
   it('create writes risk + audit + queued notification atomically', async () => {
-    const view = await svc.create({ ...baseRisk }, 'creator-oid');
+    const view = await svc.create({ ...baseRisk }, { oid: 'creator-oid', roles: [Roles.Contributor] });
     const a = await pool.query(
       `SELECT count(*)::int n FROM audit_event WHERE entity='risk' AND entity_id=$1 AND action='created'`, [view.id]);
     const n = await pool.query(`SELECT count(*)::int n FROM notification WHERE risk_id=$1`, [view.id]);
