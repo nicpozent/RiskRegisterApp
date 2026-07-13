@@ -9,12 +9,15 @@ the visual scorecard; it is expected to be diffed alongside the code.
 |---|---|
 | **Reviewed** | 2026-07-13 |
 | **Revision** | `main @ 399217e` |
-| **Overall** | **4.4 / 5** — internal-production-ready (9/18 dimensions Excellent, 8 Strong, 1 Adequate) |
+| **Overall** | **4.3 / 5** — internal-production-ready (7/18 dimensions Excellent, 10 Strong, 1 Adequate) |
 | **Automated tests** | 91 — 22 API unit · 50 API integration (real Postgres) · 6 worker · 13 web · + compose smoke e2e · + autocannon load smoke |
 | **Documentation** | 15 ADRs · TOGAF ABB/SBB catalogue · 8 migrations |
 | **Controls** | 42-framework in-app catalogue (product data) + a 21-control controls-as-code self-assessment ([`compliance/controls.json`](../compliance/controls.json), CI-gated) |
 
 Rating scale: **★★★★★ Excellent** · **★★★★☆ Strong** · **★★★☆☆ Adequate** · **★★☆☆☆ Partial**.
+A dimension is **★★★★★ only when it has no open gap**; any real item in "Gaps / next"
+caps it at **★★★★**. A deliberate design choice (e.g. CSS-bar charts) or a control
+correctly delegated elsewhere (e.g. MFA at the identity provider) is not a gap.
 
 ## The application
 
@@ -37,10 +40,10 @@ What a user actually does, mapped to the business capability it serves.
 
 | # | Dimension | Rating | Evidence | Gaps / next |
 |---|-----------|--------|----------|-------------|
-| 1 | Functional coverage | ★★★★★ | Register CRUD w/ optimistic concurrency; qual (5×5) + quant (FAIR ALE) scoring; dashboard; 42-framework control library + mapping; treatment workflow; admin/audit; CSV + JSON export | Per-version approval workflow and evidence-file attachments not built |
+| 1 | Functional coverage | ★★★★☆ | Register CRUD w/ optimistic concurrency; qual (5×5) + quant (FAIR ALE) scoring; dashboard; 42-framework control library + mapping; treatment workflow; admin/audit; CSV + JSON export | Per-version approval workflow and evidence-file attachments not built |
 | 2 | Architecture & modularity | ★★★★★ | Clean/hexagonal 4-layer; npm-workspaces monorepo (api · worker · web · shared); 15 ADRs + TOGAF ABB/SBB | — |
-| 3 | Frontend engineering | ★★★★★ | React 18 + Vite 5, TypeScript throughout; dependency-light hash router; ESLint flat (0 errors); 13 component/interaction tests (Vitest + RTL); accessible forms | Charts are CSS bars by design; full browser click-through e2e not yet added |
-| 4 | Identity & access | ★★★★★ | Entra SSO (MSAL, PKCE); JWKS RS256 pinned to issuer/audience/tenant; roles from claims; JIT provisioning | MFA / Conditional Access is Entra-side |
+| 3 | Frontend engineering | ★★★★☆ | React 18 + Vite 5, TypeScript throughout; dependency-light hash router; ESLint flat (0 errors); 13 component/interaction tests (Vitest + RTL); accessible forms | No frontend browser/click-through e2e (charts as CSS bars is a deliberate choice, not a gap) |
+| 4 | Identity & access | ★★★★★ | Entra SSO (MSAL, PKCE); JWKS RS256 pinned to issuer/audience/tenant; roles from claims; JIT provisioning; MFA / Conditional Access correctly delegated to Entra (see `IAM-4` in Top risks) | — |
 | 5 | Authorization model | ★★★★★ | Server-enforced RBAC (7 roles) + per-object ownership; residual-acceptance limited to Admin/CISO; integration-tested, no IDOR | — |
 | 6 | Data & persistence | ★★★★★ | PostgreSQL 16; least-privilege `rr_api` role; append-only audit (trigger + revoked grants); transactional migration runner (8); row-version optimistic concurrency | — |
 | 7 | Security & hardening | ★★★★☆ | Helmet, single-origin CORS, rate limiting, 256 kb body cap, parameterized SQL, Zod at every route, no committed secrets; CodeQL SAST + Trivy secret/misconfig gating | At-rest encryption + DB-hop TLS host-dependent (opt-in); no external pen-test |
