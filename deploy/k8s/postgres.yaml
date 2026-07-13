@@ -24,8 +24,14 @@ spec:
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
-          volumeMounts: [{ name: pgdata, mountPath: /var/lib/postgresql/data }]
+          # Read-only rootfs: data lives on the PV; postgres still needs a
+          # writable socket dir and /tmp.
+          volumeMounts:
+            - { name: pgdata, mountPath: /var/lib/postgresql/data }
+            - { name: run,    mountPath: /var/run/postgresql }
+            - { name: tmp,    mountPath: /tmp }
           resources:
             requests: { cpu: "250m", memory: "256Mi" }
             limits:   { cpu: "1",    memory: "1Gi" }
@@ -35,6 +41,9 @@ spec:
           readinessProbe:
             exec: { command: ["pg_isready", "-U", "$(POSTGRES_USER)"] }
             initialDelaySeconds: 5
+      volumes:
+        - { name: run, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }
   volumeClaimTemplates:
     - metadata: { name: pgdata }
       spec: { accessModes: ["ReadWriteOnce"], resources: { requests: { storage: 10Gi } } }
