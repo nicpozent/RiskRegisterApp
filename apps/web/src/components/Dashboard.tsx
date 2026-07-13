@@ -3,41 +3,31 @@ import { Risks } from '../api.js';
 import { navigate } from '../router.js';
 import type { Band, RiskSummary } from '../types.js';
 import { BANDS } from '../types.js';
+import { HBarChart, type BarDatum } from './Charts.js';
 
 const money = (n: number) => `£${Math.round(n).toLocaleString()}`;
+const BAND_COLOR: Record<Band, string> = {
+  Low: '--low', Medium: '--medium', High: '--high', Critical: '--critical',
+};
 
-function BandBars({ title, data }: { title: string; data: Record<Band, number> }) {
-  const max = Math.max(1, ...BANDS.map((b) => data[b]));
+function BandChart({ title, data }: { title: string; data: Record<Band, number> }) {
+  const rows: BarDatum[] = BANDS.map((b) => ({ label: b, value: data[b], colorVar: BAND_COLOR[b] }));
   return (
     <div className="card">
       <h3 style={{ marginTop: 0 }}>{title}</h3>
-      {BANDS.map((b) => (
-        <div key={b} className="barrow">
-          <span className="barlabel">{b}</span>
-          <div className="bartrack">
-            <div className={`barfill ${b}`} style={{ width: `${(data[b] / max) * 100}%` }} />
-          </div>
-          <span className="barval">{data[b]}</span>
-        </div>
-      ))}
+      <HBarChart data={rows} ariaLabel={title} />
     </div>
   );
 }
 
-function CountBars({ title, data }: { title: string; data: Record<string, number> }) {
-  const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-  const max = Math.max(1, ...entries.map(([, n]) => n));
+function CountChart({ title, data }: { title: string; data: Record<string, number> }) {
+  const rows: BarDatum[] = Object.entries(data)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => ({ label, value }));
   return (
     <div className="card">
       <h3 style={{ marginTop: 0 }}>{title}</h3>
-      {entries.length === 0 && <p className="muted">No data.</p>}
-      {entries.map(([k, n]) => (
-        <div key={k} className="barrow">
-          <span className="barlabel">{k}</span>
-          <div className="bartrack"><div className="barfill accent" style={{ width: `${(n / max) * 100}%` }} /></div>
-          <span className="barval">{n}</span>
-        </div>
-      ))}
+      {rows.length === 0 ? <p className="muted">No data.</p> : <HBarChart data={rows} ariaLabel={title} />}
     </div>
   );
 }
@@ -71,12 +61,12 @@ export function Dashboard() {
       </div>
 
       <div className="grid2">
-        <BandBars title="Inherent risk by band" data={s.byInherentBand} />
-        <BandBars title="Residual risk by band" data={s.byResidualBand} />
+        <BandChart title="Inherent risk by band" data={s.byInherentBand} />
+        <BandChart title="Residual risk by band" data={s.byResidualBand} />
       </div>
       <div className="grid2">
-        <CountBars title="By status" data={s.byStatus} />
-        <CountBars title="By treatment" data={s.byTreatment} />
+        <CountChart title="By status" data={s.byStatus} />
+        <CountChart title="By treatment" data={s.byTreatment} />
       </div>
     </div>
   );
