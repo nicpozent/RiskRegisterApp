@@ -246,9 +246,23 @@ Addressing gaps where the implementation trailed the documented design:
   directory sync. (It provisions the *acting* user; assigning others as
   owner/stakeholder still needs those rows to exist.)
 
+## Least-privilege DB role (later round)
+
+- Migration `0005` adds role `rr_api` with least privilege — SELECT/INSERT/
+  UPDATE/DELETE on business tables, **INSERT/SELECT only on `audit_event`**
+  (UPDATE/DELETE/TRUNCATE revoked), USAGE/SELECT on sequences, and matching
+  default privileges for future objects. It's `NOLOGIN`/no-password (no secret
+  committed); prod points the app's `DATABASE_URL` at it via a vault-managed
+  login, while migrations/seed run as the owner. Verified by
+  `db-role.test.ts` (`SET ROLE rr_api` → append-only enforced at the grant level,
+  business tables writable).
+
 ## Remaining follow-ups (not in this change)
 
 - **Event bus:** replace the DB-polling outbox with a broker when throughput
   demands (the `events.ts` producer is the seam).
+- **Wire the app to `rr_api` in dev/compose:** currently the app connects as the
+  owner locally; switching compose to the limited role needs a dev credential
+  (kept out of git) — an ops/deploy task.
 - **Dev-only advisories:** vite/vitest/esbuild (build-time only, not shipped in
   runtime images). Upgrade when convenient.

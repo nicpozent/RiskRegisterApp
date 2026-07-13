@@ -49,5 +49,9 @@ single-role setup connects as the table owner (who bypasses privilege checks).
 So enforcement is implemented as a `BEFORE UPDATE OR DELETE` trigger on
 `audit_event` (migration `0003`) that raises for every role, owner included.
 Running the app under a dedicated least-privilege role with only `INSERT`/`SELECT`
-on `audit_event` remains the recommended production defence-in-depth. Verified by
-`apps/api/test/integration/audit.test.ts`.
+on `audit_event` is the recommended production defence-in-depth. That role
+(`rr_api`) is now provided by migration `0005` — created NOLOGIN/no-password so
+no secret is committed; production points the app's `DATABASE_URL` at it (via a
+vault-managed login), while migrations/seed run as the owner. Verified by
+`apps/api/test/integration/audit.test.ts` (trigger) and `db-role.test.ts` (grant
+model, via `SET ROLE rr_api`).
