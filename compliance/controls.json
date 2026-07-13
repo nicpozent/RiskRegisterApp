@@ -132,14 +132,14 @@
     },
     {
       "id": "MON-1",
-      "title": "Monitoring and health checks",
-      "statement": "API and worker expose Prometheus /metrics (RED + runtime + queue depth) and DB-checked readiness/liveness endpoints.",
+      "title": "Monitoring, tracing and health checks",
+      "statement": "API and worker expose Prometheus /metrics (RED + runtime + queue depth) and DB-checked readiness/liveness endpoints; opt-in OpenTelemetry distributed tracing (OTLP) auto-instruments HTTP/Express/pg, correlated with the request-id logs.",
       "status": "implemented",
       "frameworks": {
         "iso27001": ["A.8.16"],
         "nistCsf": ["DE.CM-01"]
       },
-      "evidence": ["apps/api/src/interface/metrics.ts", "apps/worker/src/metrics.ts", "apps/worker/src/server.ts"]
+      "evidence": ["apps/api/src/interface/metrics.ts", "apps/api/src/tracing.ts", "apps/worker/src/metrics.ts", "apps/worker/src/server.ts"]
     },
     {
       "id": "SEC-1",
