@@ -1,5 +1,5 @@
 import { pca, loginRequest } from './authConfig.js';
-import type { RiskView, RiskInput } from './types.js';
+import type { RiskView, RiskInput, RiskSummary } from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
@@ -30,6 +30,9 @@ export const Risks = {
     const res = await request(`/risks?limit=${limit}&offset=${offset}`);
     const total = Number(res.headers.get('X-Total-Count') ?? '0');
     return { items: await res.json(), total };
+  },
+  async summary(): Promise<RiskSummary> {
+    return (await request('/risks/summary')).json();
   },
   async get(id: string): Promise<RiskView> {
     return (await request(`/risks/${id}`)).json();

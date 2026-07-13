@@ -17,6 +17,11 @@ risks.get('/', requireRole(...AnyRole), asyncHandler(async (req, res) => {
   res.setHeader('X-Total-Count', String(total));
   res.json(items);
 }));
+// Dashboard aggregates. Registered before '/:id' so it isn't captured as an id.
+risks.get('/summary', requireRole(...AnyRole), asyncHandler(async (_req, res) => {
+  res.json(await svc.summary());
+}));
+
 risks.get('/:id', requireRole(...AnyRole), asyncHandler(async (req, res) => {
   const r = await svc.get(req.params.id);
   if (!r) return res.status(404).json({ error: 'not found' });

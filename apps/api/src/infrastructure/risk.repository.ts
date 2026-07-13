@@ -1,6 +1,17 @@
 import { Risk } from '../domain/risk.js';
 import type { Queryable } from './db.js';
 
+/** Raw grouped aggregates from the DB; the service maps scores → bands. */
+export interface RiskSummaryRaw {
+  total: number;
+  inherentAle: number;
+  residualAle: number;
+  byStatus: { status: string; n: number }[];
+  byTreatment: { treatment: string; n: number }[];
+  inherentScores: { s: number; n: number }[];
+  residualScores: { s: number; n: number }[];
+}
+
 const COLS = `id, ref, title, description, category, owner_id as "ownerId",
   inherent_l as "inherentL", inherent_i as "inherentI",
   residual_l as "residualL", residual_i as "residualI",
@@ -46,6 +57,33 @@ export class RiskRepository {
   async count(): Promise<number> {
     const { rows } = await this.db.query('SELECT count(*)::int n FROM risk');
     return rows[0].n;
+  }
+
+  /**
+   * Register-wide aggregates for the dashboard, computed in the database
+   * (GROUP BY) so it stays cheap as the register grows. Scores are returned
+   * raw; the service maps them to bands via the single-source domain thresholds
+   * so the SQL never duplicates the band boundaries.
+   */
+  async summary(): Promise<RiskSummaryRaw> {
+    const [totals, byStatus, byTreatment, inh, res] = await Promise.all([
+      this.db.query(`SELECT count(*)::int total,
+          COALESCE(SUM(sle * aro), 0)::float "inherentAle",
+          COALESCE(SUM(sle * residual_aro), 0)::float "residualAle" FROM risk`),
+      this.db.query(`SELECT status, count(*)::int n FROM risk GROUP BY status`),
+      this.db.query(`SELECT treatment, count(*)::int n FROM risk GROUP BY treatment`),
+      this.db.query(`SELECT (inherent_l * inherent_i) s, count(*)::int n FROM risk GROUP BY s`),
+      this.db.query(`SELECT (residual_l * residual_i) s, count(*)::int n FROM risk GROUP BY s`),
+    ]);
+    return {
+      total: totals.rows[0].total,
+      inherentAle: totals.rows[0].inherentAle,
+      residualAle: totals.rows[0].residualAle,
+      byStatus: byStatus.rows,
+      byTreatment: byTreatment.rows,
+      inherentScores: inh.rows,
+      residualScores: res.rows,
+    };
   }
 
   async findAll(limit = 50, offset = 0): Promise<Risk[]> {

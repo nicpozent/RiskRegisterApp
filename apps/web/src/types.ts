@@ -23,6 +23,18 @@ export interface RiskInput {
   sle?: number; aro?: number; residualAro?: number; nextReview?: string;
 }
 
+// Register-wide aggregates for the dashboard (mirrors API RiskSummary).
+export interface RiskSummary {
+  total: number;
+  inherentAle: number;
+  residualAle: number;
+  byInherentBand: Record<Band, number>;
+  byResidualBand: Record<Band, number>;
+  byStatus: Record<string, number>;
+  byTreatment: Record<string, number>;
+}
+
+export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =
   ['open', 'assessed', 'treating', 'monitored', 'closed'];

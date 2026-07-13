@@ -112,3 +112,20 @@ textarea { resize: vertical; min-height: 72px; }
 .dl dd { margin: 0; }
 
 .center { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+
+nav a { color: var(--muted); padding: 6px 4px; }
+nav a.active { color: var(--text); border-bottom: 2px solid var(--accent); }
+
+.kpi { text-align: center; }
+.kpi-n { font-size: 28px; font-weight: 700; }
+
+.barrow { display: grid; grid-template-columns: 90px 1fr 40px; align-items: center; gap: 10px; margin: 8px 0; }
+.barlabel { color: var(--muted); font-size: 13px; text-transform: capitalize; }
+.bartrack { background: var(--bg); border-radius: 5px; height: 16px; overflow: hidden; }
+.barfill { height: 100%; border-radius: 5px; min-width: 2px; transition: width 0.3s; }
+.barfill.accent { background: var(--accent); }
+.barfill.Low { background: var(--low); }
+.barfill.Medium { background: var(--medium); }
+.barfill.High { background: var(--high); }
+.barfill.Critical { background: var(--critical); }
+.barval { text-align: right; font-variant-numeric: tabular-nums; }

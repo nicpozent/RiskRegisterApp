@@ -1,11 +1,22 @@
 import type { Pool } from 'pg';
 import { Risk, toView } from '../domain/risk.js';
+import { band, Band } from '../domain/scoring.js';
 import { Actor, canModifyRisk } from '../domain/roles.js';
 import { RiskRepository } from '../infrastructure/risk.repository.js';
 import type { Queryable } from '../infrastructure/db.js';
 import { emit } from './events.js';
 import { audit } from '../infrastructure/audit.js';
 import { forbidden, conflict } from './errors.js';
+
+export interface RiskSummary {
+  total: number;
+  inherentAle: number;
+  residualAle: number;
+  byInherentBand: Record<Band, number>;
+  byResidualBand: Record<Band, number>;
+  byStatus: Record<string, number>;
+  byTreatment: Record<string, number>;
+}
 
 export class RiskService {
   private reads: RiskRepository;
@@ -16,6 +27,30 @@ export class RiskService {
     return { items: rows.map(toView), total };
   }
   async get(id: string) { const r = await this.reads.findById(id); return r ? toView(r) : null; }
+
+  /** Register-wide dashboard aggregates (counts by band/status/treatment, ALE totals). */
+  async summary(): Promise<RiskSummary> {
+    const raw = await this.reads.summary();
+    const bands = (rows: { s: number; n: number }[]): Record<Band, number> => {
+      const acc: Record<Band, number> = { Low: 0, Medium: 0, High: 0, Critical: 0 };
+      for (const { s, n } of rows) acc[band(s)] += n;
+      return acc;
+    };
+    const tally = <K extends string>(rows: Record<K, string | number>[], key: K): Record<string, number> => {
+      const acc: Record<string, number> = {};
+      for (const r of rows) acc[String(r[key])] = Number((r as { n: number }).n);
+      return acc;
+    };
+    return {
+      total: raw.total,
+      inherentAle: raw.inherentAle,
+      residualAle: raw.residualAle,
+      byInherentBand: bands(raw.inherentScores),
+      byResidualBand: bands(raw.residualScores),
+      byStatus: tally(raw.byStatus, 'status'),
+      byTreatment: tally(raw.byTreatment, 'treatment'),
+    };
+  }
 
   /**
    * Run a mutation, its audit row, and its emitted event in ONE transaction, so

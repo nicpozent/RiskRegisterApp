@@ -118,6 +118,18 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     expect(res.headers['x-total-count']).toBe('3');
   });
 
+  it('aggregates the register at GET /risks/summary', async () => {
+    // Two risks: one residual High (L3×I3=9), one residual Low (L1×I2=2).
+    await repo.insert({ ...validBody, residualL: 3, residualI: 3, treatment: 'Mitigate', status: 'open', stakeholderIds: [], controlIds: [] });
+    await repo.insert({ ...validBody, residualL: 1, residualI: 2, treatment: 'Accept', status: 'monitored', stakeholderIds: [], controlIds: [] });
+    const res = await request(app).get('/risks/summary').set('Authorization', bearer(viewer)).expect(200);
+    expect(res.body.total).toBe(2);
+    expect(res.body.byResidualBand.High).toBe(1);
+    expect(res.body.byResidualBand.Low).toBe(1);
+    expect(res.body.byTreatment.Mitigate).toBe(1);
+    expect(res.body.byStatus.monitored).toBe(1);
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))
