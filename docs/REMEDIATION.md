@@ -283,7 +283,19 @@ Addressing gaps where the implementation trailed the documented design:
   plugging into whatever backend you run (Tempo/Jaeger/SaaS). The request id is
   the correlation seam. Not added here to avoid shipping heavy, unverified deps.
 - **Alerting** lives in your monitoring stack as Prometheus rules over the
-  metrics above. Worker metrics/health endpoint is a small follow-up.
+  metrics above.
+- **Worker health/metrics** (later round) — the notification worker now runs a
+  tiny built-in-`http` server (no extra web framework) exposing `/healthz`
+  (liveness), `/readyz` (DB reachable) and `/metrics`. Metrics cover default
+  process/runtime plus pipeline-specific series: `worker_notifications_processed_total`
+  (by `outcome` = sent/failed/retried), `worker_poll_total`, `worker_poll_errors_total`,
+  `worker_notification_queue_depth` (backlog gauge, sampled each poll) and
+  `worker_last_run_timestamp_seconds` (staleness signal). The k8s Deployment
+  gains liveness/readiness probes on `:9091` (kubelet-sourced, so unaffected by
+  the default-deny NetworkPolicy) and Prometheus scrape annotations; a
+  `worker-metrics` Service is added. Scrape-path ingress from your monitoring
+  namespace still needs a NetworkPolicy allow rule specific to that deployment.
+  Covered by a worker integration test (healthz/readyz/metrics/404).
 
 ## SPA product UI — Phase 1 (later round)
 

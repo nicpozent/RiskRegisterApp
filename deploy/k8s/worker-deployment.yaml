@@ -7,7 +7,12 @@ spec:
   replicas: 2
   selector: { matchLabels: { app: worker } }
   template:
-    metadata: { labels: { app: worker } }
+    metadata:
+      labels: { app: worker }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9091"
+        prometheus.io/path: /metrics
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -18,7 +23,7 @@ spec:
         - name: worker
           image: ghcr.io/biltema-birgma/rr-worker:latest
           imagePullPolicy: IfNotPresent
-          
+          ports: [{ name: metrics, containerPort: 9091 }]
           envFrom: [{ secretRef: { name: rr-secrets } }]
           securityContext:
             allowPrivilegeEscalation: false
@@ -27,4 +32,15 @@ spec:
           resources:
             requests: { cpu: "100m", memory: "128Mi" }
             limits:   { cpu: "500m", memory: "512Mi" }
+          livenessProbe:  { httpGet: { path: /healthz, port: 9091 }, initialDelaySeconds: 10 }
+          readinessProbe: { httpGet: { path: /readyz,  port: 9091 }, initialDelaySeconds: 5 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker-metrics
+  namespace: risk-register
+spec:
+  selector: { app: worker }
+  ports: [{ name: metrics, port: 9091, targetPort: 9091 }]
 ---

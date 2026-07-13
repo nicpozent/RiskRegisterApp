@@ -18,7 +18,10 @@ const MAX_ATTEMPTS = 5;
  * notification. Failures are retried up to MAX_ATTEMPTS, then parked as
  * 'failed' with the last error recorded for triage.
  */
-export async function processQueue(db: Pool) {
+export interface ProcessSummary { claimed: number; sent: number; failed: number; retried: number; }
+
+export async function processQueue(db: Pool): Promise<ProcessSummary> {
+  const summary: ProcessSummary = { claimed: 0, sent: 0, failed: 0, retried: 0 };
   const { rows: claimed } = await db.query(
     `UPDATE notification
         SET status = 'sending', attempts = attempts + 1
@@ -30,6 +33,7 @@ export async function processQueue(db: Pool) {
          FOR UPDATE SKIP LOCKED)
       RETURNING id, risk_id, type, attempts`);
 
+  summary.claimed = claimed.length;
   for (const n of claimed) {
     try {
       const { rows: people } = await db.query(
@@ -51,6 +55,7 @@ export async function processQueue(db: Pool) {
       await db.query(
         `UPDATE notification SET status='sent', recipients=$2, sent_at=now() WHERE id=$1`,
         [n.id, JSON.stringify(to)]);
+      summary.sent++;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const giveUp = n.attempts >= MAX_ATTEMPTS;
@@ -58,8 +63,9 @@ export async function processQueue(db: Pool) {
       await db.query(
         `UPDATE notification SET status=$2, last_error=$3 WHERE id=$1`,
         [n.id, giveUp ? 'failed' : 'queued', msg]);
-      // eslint-disable-next-line no-console
+      if (giveUp) summary.failed++; else summary.retried++;
       console.error(`notification ${n.id} attempt ${n.attempts} failed${giveUp ? ' (giving up)' : ''}:`, msg);
     }
   }
+  return summary;
 }
