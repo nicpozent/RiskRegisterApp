@@ -1,3 +1,4 @@
+import { stopTracing } from './tracing.js'; // must be first: patches http/express/pg
 import { buildApp } from './interface/http.js';
 import { env } from './config/env.js';
 import { pool } from './infrastructure/db.js';
@@ -14,7 +15,8 @@ function shutdown(signal: string) {
   console.log(`${signal} received — draining`);
   const force = setTimeout(() => process.exit(1), 10_000).unref();
   server.close(async () => {
-    try { await pool.end(); } finally { clearTimeout(force as unknown as NodeJS.Timeout); process.exit(0); }
+    try { await stopTracing(); await pool.end(); }
+    finally { clearTimeout(force as unknown as NodeJS.Timeout); process.exit(0); }
   });
 }
 for (const sig of ['SIGTERM', 'SIGINT'] as const) process.on(sig, () => shutdown(sig));

@@ -6,6 +6,17 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Distributed tracing (later round)
+
+- **OpenTelemetry tracing** on API and worker (`src/tracing.ts`, imported first
+  so it patches http/express/pg before they load). **Opt-in and vendor-neutral**:
+  enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (any OTLP/HTTP
+  collector — Tempo/Jaeger/SaaS), a zero-cost no-op otherwise. Auto-instruments
+  HTTP, Express and pg; spans align with the existing request-id log correlation.
+  Uses the lean `sdk-trace-node` assembly (not `sdk-node`) to avoid pulling the
+  vulnerable Prometheus-exporter transitive dependency. Documented in
+  `.env.example`; closes the last observability gap (control `MON-1`).
+
 ## Backup / DR + load-perf (later round)
 
 - **Backup & restore.** `scripts/ops/backup.sh` (pg_dump, custom compressed

@@ -1,3 +1,4 @@
+import { stopTracing } from './tracing.js'; // must be first: patches pg/http
 import { Pool } from 'pg';
 import type { Server } from 'node:http';
 import { processQueue } from './notifications.js';
@@ -39,7 +40,9 @@ function shutdown(signal: string) {
   if (timer) clearTimeout(timer);
   health.close();
   const force = setTimeout(() => process.exit(1), 10_000).unref();
-  db.end().finally(() => { clearTimeout(force as unknown as NodeJS.Timeout); process.exit(0); });
+  stopTracing()
+    .then(() => db.end())
+    .finally(() => { clearTimeout(force as unknown as NodeJS.Timeout); process.exit(0); });
 }
 for (const sig of ['SIGTERM', 'SIGINT'] as const) process.on(sig, () => shutdown(sig));
 
