@@ -39,6 +39,28 @@ describe.skipIf(!HAS_DB)('object-level authorization (integration)', () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
+  it('create writes risk + audit + queued notification atomically', async () => {
+    const view = await svc.create({ ...baseRisk }, 'creator-oid');
+    const a = await pool.query(
+      `SELECT count(*)::int n FROM audit_event WHERE entity='risk' AND entity_id=$1 AND action='created'`, [view.id]);
+    const n = await pool.query(`SELECT count(*)::int n FROM notification WHERE risk_id=$1`, [view.id]);
+    expect(a.rows[0].n).toBe(1);
+    expect(n.rows[0].n).toBe(1);
+  });
+
+  it('a denied update writes no audit or notification row (transaction/ordering)', async () => {
+    const { risk } = await ownedRisk();
+    await seedUser('nope-oid', 'nope@b.com');
+    await expect(
+      svc.update(risk.id, { status: 'monitored' }, { oid: 'nope-oid', roles: [Roles.Contributor] })
+    ).rejects.toMatchObject({ status: 403 });
+    const a = await pool.query(
+      `SELECT count(*)::int n FROM audit_event WHERE entity='risk' AND entity_id=$1 AND action='modified'`, [risk.id]);
+    const n = await pool.query(`SELECT count(*)::int n FROM notification WHERE risk_id=$1`, [risk.id]);
+    expect(a.rows[0].n).toBe(0);
+    expect(n.rows[0].n).toBe(0);
+  });
+
   it('lets an elevated CISO update any risk', async () => {
     const { risk } = await ownedRisk();
     const res = await svc.update(risk.id, { status: 'treating' },

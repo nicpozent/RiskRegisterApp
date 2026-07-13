@@ -2,64 +2,93 @@ import type { Pool } from 'pg';
 import { Risk, toView } from '../domain/risk.js';
 import { Actor, canModifyRisk } from '../domain/roles.js';
 import { RiskRepository } from '../infrastructure/risk.repository.js';
+import type { Queryable } from '../infrastructure/db.js';
 import { emit } from './events.js';
 import { audit } from '../infrastructure/audit.js';
 import { forbidden } from './errors.js';
 
 export class RiskService {
-  private repo: RiskRepository;
-  constructor(private db: Pool) { this.repo = new RiskRepository(db); }
+  private reads: RiskRepository;
+  constructor(private pool: Pool) { this.reads = new RiskRepository(pool); }
 
   async list(limit = 50, offset = 0) {
-    const [rows, total] = await Promise.all([this.repo.findAll(limit, offset), this.repo.count()]);
+    const [rows, total] = await Promise.all([this.reads.findAll(limit, offset), this.reads.count()]);
     return { items: rows.map(toView), total };
   }
-  async get(id: string) { const r = await this.repo.findById(id); return r ? toView(r) : null; }
+  async get(id: string) { const r = await this.reads.findById(id); return r ? toView(r) : null; }
+
+  /**
+   * Run a mutation, its audit row, and its emitted event in ONE transaction, so
+   * a crash can never leave a business change without its audit entry (or vice
+   * versa). The repo/audit/emit inside `fn` share the same transaction client.
+   */
+  private async withTx<T>(fn: (repo: RiskRepository, tx: Queryable) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await fn(new RiskRepository(client), client);
+      await client.query('COMMIT');
+      return result;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
 
   /** Throw 403 unless the actor may modify this specific risk (object-level authz). */
-  private async assertCanModify(actor: Actor, risk: Risk) {
-    const actorUserId = await this.repo.userIdByOid(actor.oid);
+  private async assertCanModify(repo: RiskRepository, actor: Actor, risk: Risk) {
+    const actorUserId = await repo.userIdByOid(actor.oid);
     if (!canModifyRisk(actor.roles, actorUserId, risk)) {
       throw forbidden('not an owner or stakeholder of this risk');
     }
   }
 
   async create(input: Omit<Risk,'id'|'ref'>, actorOid: string) {
-    const created = await this.repo.insert(input);
-    await audit(this.db, actorOid, 'created', 'risk', created.id, null, created);
-    await emit(this.db, { type: 'risk.assigned', riskId: created.id, actorOid });
-    return toView(created);
+    return this.withTx(async (repo, tx) => {
+      const created = await repo.insert(input);
+      await audit(tx, actorOid, 'created', 'risk', created.id, null, created);
+      await emit(tx, { type: 'risk.assigned', riskId: created.id, actorOid });
+      return toView(created);
+    });
   }
 
   async update(id: string, patch: Partial<Risk>, actor: Actor) {
-    const before = await this.repo.findById(id);
-    if (!before) return null;
-    await this.assertCanModify(actor, before);
-    const after  = await this.repo.update(id, patch);
-    await audit(this.db, actor.oid, 'modified', 'risk', id, before, after);
-    await emit(this.db, { type: 'risk.updated', riskId: id, actorOid: actor.oid, summary: Object.keys(patch).join(', ') });
-    return after ? toView(after) : null;
+    return this.withTx(async (repo, tx) => {
+      const before = await repo.findById(id);
+      if (!before) return null;
+      await this.assertCanModify(repo, actor, before);
+      const after = await repo.update(id, patch);
+      await audit(tx, actor.oid, 'modified', 'risk', id, before, after);
+      await emit(tx, { type: 'risk.updated', riskId: id, actorOid: actor.oid, summary: Object.keys(patch).join(', ') });
+      return after ? toView(after) : null;
+    });
   }
 
   /** Formal residual-risk acceptance (CISO/Admin) — distinct audit + event. */
   async accept(id: string, actor: Actor) {
-    const before = await this.repo.findById(id);
-    if (!before) return null;
-    await this.assertCanModify(actor, before);
-    const after = await this.repo.update(id, { status: 'accepted' });
-    await audit(this.db, actor.oid, 'approved', 'risk', id, before, after);
-    await emit(this.db, { type: 'risk.accepted', riskId: id, actorOid: actor.oid });
-    return after ? toView(after) : null;
+    return this.withTx(async (repo, tx) => {
+      const before = await repo.findById(id);
+      if (!before) return null;
+      await this.assertCanModify(repo, actor, before);
+      const after = await repo.update(id, { status: 'accepted' });
+      await audit(tx, actor.oid, 'approved', 'risk', id, before, after);
+      await emit(tx, { type: 'risk.accepted', riskId: id, actorOid: actor.oid });
+      return after ? toView(after) : null;
+    });
   }
 
   /** Map a control to a risk and notify owner + stakeholders. */
   async mapControl(riskId: string, controlId: string, actor: Actor) {
-    const risk = await this.repo.findById(riskId);
-    if (!risk) return null;
-    await this.assertCanModify(actor, risk);
-    await this.repo.linkControl(riskId, controlId);
-    await audit(this.db, actor.oid, 'modified', 'risk_control', riskId, null, { controlId });
-    await emit(this.db, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: 'control mapped' });
-    return true;
+    return this.withTx(async (repo, tx) => {
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      await this.assertCanModify(repo, actor, risk);
+      await repo.linkControl(riskId, controlId);
+      await audit(tx, actor.oid, 'modified', 'risk_control', riskId, null, { controlId });
+      await emit(tx, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: 'control mapped' });
+      return true;
+    });
   }
 }

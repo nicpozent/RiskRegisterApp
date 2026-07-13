@@ -223,12 +223,22 @@ Addressing gaps where the implementation trailed the documented design:
   repository setting and must be enabled in GitHub UI/API — it cannot be
   committed to the repo.
 
+## Perf, pagination & transactional writes (later round)
+
+- **N+1 fixed / pagination added.** `RiskRepository.findAll` batch-hydrates
+  controls & stakeholders in 2 queries (was 2 per row); `GET /risks` takes
+  `?limit`/`?offset` with the total in `X-Total-Count` (body stays an array).
+- **Transactional writes.** `RiskService` now runs each mutation + its audit row
+  + emitted event in a single `BEGIN/COMMIT` (repo/audit/emit share one
+  `Queryable` client), so a crash can't persist a change without its audit
+  entry. Covered by atomicity tests in `authz.test.ts`.
+- **CI de-duplicated.** Triggers scoped to `push:main` + `pull_request` so each
+  change runs the pipeline once.
+
 ## Remaining follow-ups (not in this change)
 
 - **JIT user provisioning:** principals must exist in `app_user` (Entra-synced)
   for ownership/notification resolution; provision on first token presentation.
-- **Audit/business write atomicity:** wrap the business write and its audit row
-  in a single transaction.
 - **Event bus:** replace the DB-polling outbox with a broker when throughput
   demands (the `events.ts` producer is the seam).
 - **Dev-only advisories:** vite/vitest/esbuild (build-time only, not shipped in

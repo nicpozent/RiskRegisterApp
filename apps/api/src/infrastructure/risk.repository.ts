@@ -1,5 +1,5 @@
-import type { Pool } from 'pg';
 import { Risk } from '../domain/risk.js';
+import type { Queryable } from './db.js';
 
 const COLS = `id, ref, title, description, category, owner_id as "ownerId",
   inherent_l as "inherentL", inherent_i as "inherentI",
@@ -7,7 +7,7 @@ const COLS = `id, ref, title, description, category, owner_id as "ownerId",
   treatment, status, sle, aro, residual_aro as "residualAro", next_review as "nextReview"`;
 
 export class RiskRepository {
-  constructor(private db: Pool) {}
+  constructor(private db: Queryable) {}
 
   /** Attach controlIds/stakeholderIds to many rows in 2 queries total (no N+1). */
   private async hydrateMany(rows: any[]): Promise<Risk[]> {

@@ -1,6 +1,6 @@
-import type { Pool } from 'pg';
+import type { Queryable } from './db.js';
 // Append-only. The DB role granted to the app has INSERT only on audit_event.
-export async function audit(db: Pool, actorOid: string, action: string,
+export async function audit(db: Queryable, actorOid: string, action: string,
   entity: string, entityId: string, before: unknown, after: unknown) {
   await db.query(
     `INSERT INTO audit_event (actor_oid, action, entity, entity_id, before, after)
