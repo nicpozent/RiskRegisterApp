@@ -1,7 +1,7 @@
 import { pca, loginRequest } from './authConfig.js';
 import type {
   RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction,
-  AuditEvent, DirectoryUser, EvidenceMeta,
+  AuditEvent, DirectoryUser, EvidenceMeta, ChangeRequest,
 } from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -78,6 +78,18 @@ export const Risks = {
   },
   async deleteEvidence(id: string, evidenceId: string): Promise<void> {
     await request(`/risks/${id}/evidence/${evidenceId}`, { method: 'DELETE' });
+  },
+  async changeRequests(id: string): Promise<ChangeRequest[]> {
+    return (await request(`/risks/${id}/change-requests`)).json();
+  },
+  async submitChange(id: string, patch: Partial<RiskInput>): Promise<ChangeRequest> {
+    return (await request(`/risks/${id}/change-requests`, { method: 'POST', body: JSON.stringify(patch) })).json();
+  },
+  async approveChange(id: string, crId: string): Promise<{ risk: RiskView; changeRequest: ChangeRequest }> {
+    return (await request(`/risks/${id}/change-requests/${crId}/approve`, { method: 'POST' })).json();
+  },
+  async rejectChange(id: string, crId: string, note?: string): Promise<ChangeRequest> {
+    return (await request(`/risks/${id}/change-requests/${crId}/reject`, { method: 'POST', body: JSON.stringify({ note }) })).json();
   },
 };
 

@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { Risk, toView } from '../domain/risk.js';
 import { band, Band } from '../domain/scoring.js';
-import { Actor, canModifyRisk } from '../domain/roles.js';
+import { Actor, canModifyRisk, isElevated } from '../domain/roles.js';
 import { RiskRepository } from '../infrastructure/risk.repository.js';
 import type { Queryable } from '../infrastructure/db.js';
 import { emit } from './events.js';
@@ -145,6 +145,64 @@ export class RiskService {
       await audit(tx, actor.oid, 'approved', 'risk', id, before, after);
       await emit(tx, { type: 'risk.accepted', riskId: id, actorOid: actor.oid });
       return after ? toView(after) : null;
+    });
+  }
+
+  // ---- Change requests (maker-checker) ----
+
+  /** Propose a change to a risk. Creates a pending request; does not modify the risk. */
+  async submitChange(riskId: string, patch: Record<string, unknown>, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      await this.assertCanModify(repo, actor, risk);
+      const cr = await repo.insertChangeRequest(riskId, patch, actor.oid);
+      await audit(tx, actor.oid, 'created', 'risk_change_request', cr.id, null, cr);
+      await emit(tx, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: 'change proposed for approval' });
+      return cr;
+    });
+  }
+
+  async listChanges(riskId: string) {
+    const risk = await this.reads.findById(riskId);
+    if (!risk) return null;
+    return this.reads.changeRequestsFor(riskId);
+  }
+
+  /**
+   * Approve a pending change: applies the proposed patch and marks it approved.
+   * Enforces segregation of duties — the maker cannot approve their own change,
+   * and only an elevated (Admin/CISO) checker may approve.
+   */
+  async approveChange(riskId: string, crId: string, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
+      if (!isElevated(actor.roles)) throw forbidden('only an elevated role may approve changes');
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      const cr = await repo.getChangeRequest(riskId, crId);
+      if (!cr) return null;
+      if (cr.status !== 'pending') throw conflict('change request already decided');
+      if (cr.submitterOid === actor.oid) throw forbidden('the maker cannot approve their own change (segregation of duties)');
+      const after = await repo.update(riskId, cr.proposed);
+      const decided = await repo.decideChangeRequest(crId, { status: 'approved', reviewerOid: actor.oid });
+      await audit(tx, actor.oid, 'approved', 'risk_change_request', crId, cr, decided);
+      await emit(tx, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: 'change request approved' });
+      return { risk: after ? toView(after) : null, changeRequest: decided };
+    });
+  }
+
+  async rejectChange(riskId: string, crId: string, note: string | undefined, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
+      if (!isElevated(actor.roles)) throw forbidden('only an elevated role may reject changes');
+      const cr = await repo.getChangeRequest(riskId, crId);
+      if (!cr) return null;
+      if (cr.status !== 'pending') throw conflict('change request already decided');
+      const decided = await repo.decideChangeRequest(crId, { status: 'rejected', reviewerOid: actor.oid, reviewNote: note });
+      await audit(tx, actor.oid, 'modified', 'risk_change_request', crId, cr, decided);
+      return decided;
     });
   }
 

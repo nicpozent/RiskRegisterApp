@@ -255,6 +255,51 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
       .send({ filename: 'ok.txt', contentType: 'text/plain', dataBase64: b64 }).expect(403);
   });
 
+  it('maker-checker: proposed change is not applied until a different elevated user approves', async () => {
+    const admin2 = { oid: 'a2-oid', name: 'A2', roles: ['Administrator'] };
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const id = created.body.id;
+
+    // Maker submits a change — the risk is NOT modified yet.
+    const cr = await request(app).post(`/risks/${id}/change-requests`).set('Authorization', bearer(admin))
+      .send({ title: 'Proposed rename' }).expect(201);
+    expect(cr.body.status).toBe('pending');
+    const still = await request(app).get(`/risks/${id}`).set('Authorization', bearer(viewer)).expect(200);
+    expect(still.body.title).toBe(validBody.title);
+
+    // Segregation of duties: the maker cannot approve their own change.
+    await request(app).post(`/risks/${id}/change-requests/${cr.body.id}/approve`).set('Authorization', bearer(admin)).expect(403);
+    // A contributor (non-elevated) is blocked by the role gate.
+    await request(app).post(`/risks/${id}/change-requests/${cr.body.id}/approve`).set('Authorization', bearer(contributor)).expect(403);
+
+    // A different elevated checker approves — now the change applies.
+    const approved = await request(app).post(`/risks/${id}/change-requests/${cr.body.id}/approve`).set('Authorization', bearer(admin2)).expect(200);
+    expect(approved.body.risk.title).toBe('Proposed rename');
+    expect(approved.body.changeRequest.status).toBe('approved');
+
+    // Re-deciding a settled request conflicts.
+    await request(app).post(`/risks/${id}/change-requests/${cr.body.id}/approve`).set('Authorization', bearer(admin2)).expect(409);
+  });
+
+  it('maker-checker: a change request can be rejected with a note (risk unchanged)', async () => {
+    const admin2 = { oid: 'a2-oid', name: 'A2', roles: ['Administrator'] };
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const id = created.body.id;
+    const cr = await request(app).post(`/risks/${id}/change-requests`).set('Authorization', bearer(admin))
+      .send({ title: 'Nope' }).expect(201);
+    const rej = await request(app).post(`/risks/${id}/change-requests/${cr.body.id}/reject`).set('Authorization', bearer(admin2))
+      .send({ note: 'insufficient justification' }).expect(200);
+    expect(rej.body.status).toBe('rejected');
+    const risk = await request(app).get(`/risks/${id}`).set('Authorization', bearer(viewer)).expect(200);
+    expect(risk.body.title).toBe(validBody.title);
+  });
+
+  it('denies a change-request submission to a read-only role (403)', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    await request(app).post(`/risks/${created.body.id}/change-requests`).set('Authorization', bearer(viewer))
+      .send({ title: 'x' }).expect(403);
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))

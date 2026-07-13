@@ -5,7 +5,7 @@ import { requireRole, Roles, AnyRole } from '../middleware/rbac.js';
 import { asyncHandler } from '../async-handler.js';
 import {
   createSchema, updateSchema, listQuerySchema, actionCreateSchema, actionUpdateSchema,
-  evidenceSchema, MAX_EVIDENCE_BYTES,
+  evidenceSchema, MAX_EVIDENCE_BYTES, rejectSchema,
 } from './risk.schemas.js';
 
 // Larger body limit only for evidence uploads (base64-encoded binary); the
@@ -69,6 +69,37 @@ risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(asy
   const accepted = await svc.accept(req.params.id, req.user!);
   if (!accepted) return res.status(404).json({ error: 'not found' });
   res.json(accepted);
+}));
+
+// ---- Change requests (maker-checker approval) ----
+risks.get('/:id/change-requests', requireRole(...AnyRole), asyncHandler(async (req, res) => {
+  const list = await svc.listChanges(req.params.id);
+  if (!list) return res.status(404).json({ error: 'not found' });
+  res.json(list);
+}));
+
+risks.post('/:id/change-requests', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const cr = await svc.submitChange(req.params.id, parsed.data, req.user!);
+  if (!cr) return res.status(404).json({ error: 'not found' });
+  res.status(201).json(cr);
+}));
+
+// Only an elevated checker (Admin/CISO) may decide; the service also enforces
+// that the maker cannot approve their own change (segregation of duties).
+risks.post('/:id/change-requests/:crId/approve', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(async (req, res) => {
+  const result = await svc.approveChange(req.params.id, req.params.crId, req.user!);
+  if (!result) return res.status(404).json({ error: 'not found' });
+  res.json(result);
+}));
+
+risks.post('/:id/change-requests/:crId/reject', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(async (req, res) => {
+  const parsed = rejectSchema.safeParse(req.body ?? {});
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const cr = await svc.rejectChange(req.params.id, req.params.crId, parsed.data.note, req.user!);
+  if (!cr) return res.status(404).json({ error: 'not found' });
+  res.json(cr);
 }));
 
 // ---- Evidence attachments ----

@@ -6,6 +6,23 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Maker-checker approval workflow (later round)
+
+- **Segregation-of-duties approvals for risk changes.** A proposed edit is
+  recorded as a **change request** (migration `0010`, `risk_change_request`
+  holding the JSON patch) and does **not** modify the risk until a *different*
+  elevated user approves it. API under `/risks/:id/change-requests`: submit
+  (`POST`, write-role + ownership), list (`GET`), `approve` and `reject`
+  (Admin/CISO only). The service enforces SoD — the **maker cannot approve their
+  own change**, non-elevated roles cannot decide, decisions are atomic
+  (pending-only) and audited; approval applies the patch via the existing update
+  path. Covered by integration tests (proposal not applied until approved;
+  self-approve 403; other-elevated approve applies; re-decide 409; reject;
+  viewer submit 403). Records control `SOD-1` (22 controls, 20 implemented).
+- **Web:** a Change-approvals panel on the risk detail page — propose a change
+  (submits for approval), and, for elevated reviewers, approve/reject pending
+  requests.
+
 ## Evidence-file attachments (later round)
 
 - **Attach evidence files to a risk.** New `evidence` table (migration `0009`,
