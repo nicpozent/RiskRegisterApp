@@ -118,16 +118,13 @@ jobs:
           docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
             --scanners secret --exit-code 1 --severity HIGH,CRITICAL --no-progress /src
 
-      # Report-only: IaC/Dockerfile misconfigurations. Surfaced in the log for
-      # triage; not gating yet to avoid churn on best-practice nits. Promote to
-      # --exit-code 1 (and drop continue-on-error) once the backlog is clean.
-      # continue-on-error keeps the job green even if trivy itself errors, since
-      # --exit-code 0 only suppresses *findings*, not usage/execution failures.
-      - name: Trivy IaC misconfig scan (report-only)
-        continue-on-error: true
+      # Gating: IaC/Dockerfile misconfigurations at HIGH/CRITICAL. The known
+      # findings (web USER, postgres readOnlyRootFilesystem) are fixed, so this
+      # now fails the build on new HIGH+ misconfigurations.
+      - name: Trivy IaC misconfig scan (gating)
         run: |
           docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
-            --scanners misconfig --exit-code 0 --severity HIGH,CRITICAL --no-progress /src
+            --scanners misconfig --exit-code 1 --severity HIGH,CRITICAL --no-progress /src
 
       # Generate a CycloneDX SBOM (from lockfiles) and keep it as a build
       # artifact — a compliance/provenance record for the GRC product itself.

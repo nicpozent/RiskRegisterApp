@@ -22,4 +22,6 @@ RUN npm run build -w @rr/web
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
+# Base image already runs as non-root uid 101; make it explicit (Trivy DS-0002).
+USER 101
 EXPOSE 8080
