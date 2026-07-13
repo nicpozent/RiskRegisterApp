@@ -62,6 +62,19 @@ export interface DirectoryUser {
 }
 export const ADMIN_ROLES = ['Administrator', 'CISO.RiskManager', 'Auditor'];
 
+// Evidence attachments (mirrors API evidence routes).
+export interface EvidenceMeta {
+  id: string; filename: string; contentType: string; sizeBytes: number;
+  uploadedBy?: string; createdAt: string;
+}
+export const EVIDENCE_CONTENT_TYPES = [
+  'application/pdf', 'image/png', 'image/jpeg', 'text/csv', 'text/plain',
+  'application/msword', 'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =

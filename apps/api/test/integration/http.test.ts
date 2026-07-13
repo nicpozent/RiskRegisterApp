@@ -221,6 +221,40 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
       .set('Authorization', bearer(viewer)).expect(404);
   });
 
+  it('uploads, lists, downloads and deletes evidence on a risk', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const id = created.body.id;
+    const payload = Buffer.from('evidence body').toString('base64');
+
+    const empty = await request(app).get(`/risks/${id}/evidence`).set('Authorization', bearer(viewer)).expect(200);
+    expect(empty.body).toHaveLength(0);
+
+    const up = await request(app).post(`/risks/${id}/evidence`).set('Authorization', bearer(admin))
+      .send({ filename: 'proof.txt', contentType: 'text/plain', dataBase64: payload }).expect(201);
+    expect(up.body).toMatchObject({ filename: 'proof.txt', sizeBytes: 13 });
+
+    const list = await request(app).get(`/risks/${id}/evidence`).set('Authorization', bearer(viewer)).expect(200);
+    expect(list.body).toHaveLength(1);
+
+    const dl = await request(app).get(`/risks/${id}/evidence/${up.body.id}`).set('Authorization', bearer(viewer)).expect(200);
+    expect(dl.headers['content-type']).toMatch(/text\/plain/);
+    expect(dl.headers['content-disposition']).toMatch(/proof\.txt/);
+    expect(dl.text).toBe('evidence body');
+
+    await request(app).delete(`/risks/${id}/evidence/${up.body.id}`).set('Authorization', bearer(admin)).expect(204);
+    const after = await request(app).get(`/risks/${id}/evidence`).set('Authorization', bearer(viewer)).expect(200);
+    expect(after.body).toHaveLength(0);
+  });
+
+  it('rejects a disallowed evidence content type (400) and denies upload to a viewer (403)', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const b64 = Buffer.from('x').toString('base64');
+    await request(app).post(`/risks/${created.body.id}/evidence`).set('Authorization', bearer(admin))
+      .send({ filename: 'evil.exe', contentType: 'application/x-msdownload', dataBase64: b64 }).expect(400);
+    await request(app).post(`/risks/${created.body.id}/evidence`).set('Authorization', bearer(viewer))
+      .send({ filename: 'ok.txt', contentType: 'text/plain', dataBase64: b64 }).expect(403);
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))

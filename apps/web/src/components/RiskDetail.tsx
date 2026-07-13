@@ -6,6 +6,7 @@ import type { RiskInput, RiskView } from '../types.js';
 import { RiskForm } from './RiskForm.js';
 import { RiskControls } from './RiskControls.js';
 import { RiskActions } from './RiskActions.js';
+import { RiskEvidence } from './RiskEvidence.js';
 
 const money = (n?: number) => (n == null ? '—' : `£${n.toLocaleString()}`);
 
@@ -118,6 +119,7 @@ export function RiskDetail({ id }: { id: string }) {
 
       <RiskActions riskId={risk.id} />
       <RiskControls riskId={risk.id} />
+      <RiskEvidence riskId={risk.id} />
     </div>
   );
 }

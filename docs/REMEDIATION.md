@@ -6,6 +6,21 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Evidence-file attachments (later round)
+
+- **Attach evidence files to a risk.** New `evidence` table (migration `0009`,
+  stored as `bytea` — fits this app's scale, keeps uploads transactional with the
+  record). API under `/risks/:id/evidence`: `GET` (metadata list, any role),
+  `POST` (upload — base64 JSON, content-type allow-list, 10 MB cap, object-level
+  authz), `GET /:evidenceId` (download with `Content-Disposition`),
+  `DELETE /:evidenceId`. Uploads/deletes run in the single-transaction `withTx`
+  with an audit row. The app-wide 256 kb JSON limit is preserved; only the
+  evidence-upload path parses with a larger limit. Filenames are sanitized to
+  prevent header injection. Covered by integration tests (upload→list→download→
+  delete; disallowed type 400; viewer 403).
+- **Web:** an Evidence panel on the risk detail page — upload (client-side type/
+  size validation), download (bearer-token blob) and remove.
+
 ## Dashboard charts (later round)
 
 - **Real inline-SVG charts** replace the dashboard's CSS bars (`Charts.tsx`):

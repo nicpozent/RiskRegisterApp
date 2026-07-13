@@ -113,6 +113,9 @@ textarea { resize: vertical; min-height: 72px; }
 
 .center { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
 
+button.linklike { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; }
+button.linklike:hover { text-decoration: underline; }
+
 nav a { color: var(--muted); padding: 6px 4px; }
 nav a.active { color: var(--text); border-bottom: 2px solid var(--accent); }
 

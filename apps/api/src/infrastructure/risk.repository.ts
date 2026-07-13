@@ -166,6 +166,35 @@ export class RiskRepository {
       [p.oid, p.name || p.oid, p.email ?? null]);
     return rows[0].id;
   }
+  // ---- Evidence attachments (risk-scoped, stored as bytea) ----
+  async evidenceFor(riskId: string) {
+    const { rows } = await this.db.query(
+      `SELECT id, filename, content_type as "contentType", size_bytes as "sizeBytes",
+              uploaded_by as "uploadedBy", created_at as "createdAt"
+         FROM evidence WHERE risk_id = $1 ORDER BY created_at DESC`, [riskId]);
+    return rows;
+  }
+  async insertEvidence(riskId: string, e: { filename: string; contentType: string; sizeBytes: number; data: Buffer; uploadedBy: string | null }) {
+    const { rows } = await this.db.query(
+      `INSERT INTO evidence (risk_id, filename, content_type, size_bytes, data, uploaded_by)
+         VALUES ($1,$2,$3,$4,$5,$6)
+       RETURNING id, filename, content_type as "contentType", size_bytes as "sizeBytes", created_at as "createdAt"`,
+      [riskId, e.filename, e.contentType, e.sizeBytes, e.data, e.uploadedBy]);
+    return rows[0];
+  }
+  /** The raw blob for download (null if not found for this risk). */
+  async evidenceBlob(riskId: string, evidenceId: string) {
+    const { rows } = await this.db.query(
+      `SELECT filename, content_type as "contentType", data FROM evidence WHERE risk_id=$1 AND id=$2`,
+      [riskId, evidenceId]);
+    return rows[0] ?? null;
+  }
+  /** Returns true if a row was deleted. */
+  async deleteEvidence(riskId: string, evidenceId: string) {
+    const res = await this.db.query('DELETE FROM evidence WHERE risk_id=$1 AND id=$2', [riskId, evidenceId]);
+    return ((res as { rowCount?: number }).rowCount ?? 0) > 0;
+  }
+
   /** Controls currently mapped to a risk (joined to the catalogue). */
   async controlsFor(riskId: string) {
     const { rows } = await this.db.query(

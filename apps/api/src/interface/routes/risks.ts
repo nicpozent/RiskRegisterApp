@@ -1,9 +1,17 @@
-import { Router } from 'express';
+import { Router, json } from 'express';
 import { pool } from '../../infrastructure/db.js';
 import { RiskService } from '../../application/risk.service.js';
 import { requireRole, Roles, AnyRole } from '../middleware/rbac.js';
 import { asyncHandler } from '../async-handler.js';
-import { createSchema, updateSchema, listQuerySchema, actionCreateSchema, actionUpdateSchema } from './risk.schemas.js';
+import {
+  createSchema, updateSchema, listQuerySchema, actionCreateSchema, actionUpdateSchema,
+  evidenceSchema, MAX_EVIDENCE_BYTES,
+} from './risk.schemas.js';
+
+// Larger body limit only for evidence uploads (base64-encoded binary); the
+// app-wide JSON limit stays at 256 kb and skips this path (see http.ts).
+const evidenceBody = json({ limit: '15mb' });
+const safeName = (n: string) => n.replace(/[\r\n"]/g, '').slice(0, 255);
 
 const svc = new RiskService(pool);
 export const risks = Router();
@@ -61,6 +69,41 @@ risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(asy
   const accepted = await svc.accept(req.params.id, req.user!);
   if (!accepted) return res.status(404).json({ error: 'not found' });
   res.json(accepted);
+}));
+
+// ---- Evidence attachments ----
+risks.get('/:id/evidence', requireRole(...AnyRole), asyncHandler(async (req, res) => {
+  const list = await svc.listEvidence(req.params.id);
+  if (!list) return res.status(404).json({ error: 'not found' });
+  res.json(list);
+}));
+
+risks.post('/:id/evidence', requireRole(...WRITE_ROLES), evidenceBody, asyncHandler(async (req, res) => {
+  const parsed = evidenceSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const data = Buffer.from(parsed.data.dataBase64, 'base64');
+  if (data.length === 0) return res.status(400).json({ error: 'empty file' });
+  if (data.length > MAX_EVIDENCE_BYTES) return res.status(413).json({ error: 'file exceeds 10 MB' });
+  const created = await svc.addEvidence(req.params.id, {
+    filename: safeName(parsed.data.filename), contentType: parsed.data.contentType,
+    sizeBytes: data.length, data,
+  }, req.user!);
+  if (!created) return res.status(404).json({ error: 'not found' });
+  res.status(201).json(created);
+}));
+
+risks.get('/:id/evidence/:evidenceId', requireRole(...AnyRole), asyncHandler(async (req, res) => {
+  const blob = await svc.getEvidence(req.params.id, req.params.evidenceId);
+  if (!blob) return res.status(404).json({ error: 'not found' });
+  res.setHeader('Content-Type', blob.contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName(blob.filename)}"`);
+  res.send(blob.data);
+}));
+
+risks.delete('/:id/evidence/:evidenceId', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
+  const result = await svc.deleteEvidence(req.params.id, req.params.evidenceId, req.user!);
+  if (result === null || result === false) return res.status(404).json({ error: 'not found' });
+  res.status(204).end();
 }));
 
 // ---- Treatment actions ----
