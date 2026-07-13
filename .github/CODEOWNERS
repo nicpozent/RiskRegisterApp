@@ -1,0 +1,3 @@
+# Default owner for everything in the repo. Adjust to teams as the org grows,
+# e.g. `/apps/api/ @org/backend` and `/deploy/ @org/platform`.
+* @nicpozent

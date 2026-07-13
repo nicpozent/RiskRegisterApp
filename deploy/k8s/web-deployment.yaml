@@ -18,19 +18,31 @@ spec:
         - name: web
           image: ghcr.io/biltema-birgma/rr-web:latest
           imagePullPolicy: IfNotPresent
-          ports: [{ containerPort: 80 }]
-          envFrom: [{ secretRef: { name: rr-secrets } }]
+          # Static SPA server — no secrets. The only build-time inputs are the
+          # public VITE_* values, baked into the bundle at image build.
+          ports: [{ containerPort: 8080 }]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
+          # Read-only rootfs: nginx needs writable temp/cache/run dirs.
+          volumeMounts:
+            - { name: cache, mountPath: /var/cache/nginx }
+            - { name: run,   mountPath: /var/run }
+            - { name: tmp,   mountPath: /tmp }
           resources:
             requests: { cpu: "100m", memory: "128Mi" }
             limits:   { cpu: "500m", memory: "512Mi" }
+          livenessProbe:  { httpGet: { path: /, port: 8080 }, initialDelaySeconds: 5 }
+          readinessProbe: { httpGet: { path: /, port: 8080 }, initialDelaySeconds: 3 }
+      volumes:
+        - { name: cache, emptyDir: {} }
+        - { name: run,   emptyDir: {} }
+        - { name: tmp,   emptyDir: {} }
 ---
 apiVersion: v1
 kind: Service
 metadata: { name: web, namespace: risk-register }
 spec:
   selector: { app: web }
-  ports: [{ port: 80, targetPort: 80 }]
+  ports: [{ port: 80, targetPort: 8080 }]

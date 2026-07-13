@@ -1,8 +1,7 @@
-// Seed the framework registry and a starter control set. Run: npm run seed
-// The full catalogue (incl. all 93 ISO 27001 Annex A controls + regional
-// regulations with guidance) ships in catalogue.seed.json alongside this file.
+// Seed the framework registry and the starter control catalogue. Run: npm run seed
+// Idempotent: re-running upserts frameworks and controls without duplicating rows.
 import { pool } from './db.js';
-import { FRAMEWORKS } from '@rr/frameworks-data';
+import { FRAMEWORKS, CONTROLS } from '@rr/frameworks-data';
 
 async function main() {
   for (const f of FRAMEWORKS) {
@@ -12,8 +11,17 @@ async function main() {
          ON CONFLICT (id) DO UPDATE SET name=excluded.name, description=excluded.description`,
       [f.id, f.name, f.authority, f.region, f.kind, f.description]);
   }
-  // eslint-disable-next-line no-console
-  console.log(`Seeded ${FRAMEWORKS.length} frameworks. Load controls from catalogue.seed.json next.`);
+
+  for (const c of CONTROLS) {
+    await pool.query(
+      `INSERT INTO control (framework,ref,title,grp,help,is_custom)
+         VALUES ($1,$2,$3,$4,$5,false)
+         ON CONFLICT (framework,ref) DO UPDATE
+           SET title=excluded.title, grp=excluded.grp, help=excluded.help`,
+      [c.framework, c.ref, c.title, c.group, c.help ?? null]);
+  }
+
+  console.log(`Seeded ${FRAMEWORKS.length} frameworks and ${CONTROLS.length} controls.`);
   await pool.end();
 }
 main().catch(e => { console.error(e); process.exit(1); });

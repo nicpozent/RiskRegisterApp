@@ -51,13 +51,19 @@ export class RiskRepository {
     await this.db.query(`UPDATE risk SET ${sets.join(',')}, updated_at=now() WHERE id=$${vals.length}`, vals);
     return this.findById(id);
   }
+  /** Resolve an Entra object id to the internal app_user id (null if unknown). */
+  async userIdByOid(oid: string): Promise<string | null> {
+    const { rows } = await this.db.query('SELECT id FROM app_user WHERE entra_oid=$1', [oid]);
+    return rows[0]?.id ?? null;
+  }
   async linkControl(riskId: string, controlId: string) {
     await this.db.query(
       `INSERT INTO risk_control (risk_id, control_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
       [riskId, controlId]);
   }
   private async nextRef(): Promise<string> {
-    const { rows } = await this.db.query(`SELECT count(*)::int n FROM risk`);
-    return 'RR-' + String(rows[0].n + 1).padStart(3, '0');
+    // Atomic — no race or reuse under concurrent inserts (see migration 0002).
+    const { rows } = await this.db.query(`SELECT nextval('risk_ref_seq')::int n`);
+    return 'RR-' + String(rows[0].n).padStart(3, '0');
   }
 }

@@ -7,30 +7,38 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "migrate": "tsx src/infrastructure/migrate.ts",
     "seed": "tsx src/infrastructure/seed.ts",
-    "lint": "eslint src --ext .ts",
-    "test": "vitest run"
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:int": "vitest run --config vitest.integration.config.ts",
+    "test:regression": "vitest run -t regression"
   },
   "dependencies": {
-    "@rr/frameworks-data": "*",
-    "express": "^4.19.2",
-    "helmet": "^7.1.0",
-    "cors": "^2.8.5",
-    "pg": "^8.12.0",
-    "jose": "^5.6.3",
     "@azure/identity": "^4.4.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
-    "zod": "^3.23.8",
+    "@rr/frameworks-data": "*",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "jose": "^5.6.3",
+    "pg": "^8.12.0",
     "pino": "^9.3.2",
-    "pino-http": "^10.2.0"
+    "pino-http": "^10.2.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5.5.4",
-    "tsx": "^4.16.5",
-    "vitest": "^2.0.5",
-    "@types/express": "^4.17.21",
+    "@eslint/js": "^9.39.4",
     "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/pg": "^8.11.6",
-    "eslint": "^9.8.0"
+    "@types/supertest": "^7.2.0",
+    "eslint": "^9.8.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.16.5",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.62.1",
+    "vitest": "^2.0.5"
   }
 }

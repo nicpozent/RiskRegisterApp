@@ -52,6 +52,43 @@ All configuration is via environment variables — see `.env.example`. **No secr
 are committed.** In production these come from Azure Key Vault / a KMS via workload
 identity, never from `.env` files or images.
 
+Set `DATABASE_SSL=true` only when the database endpoint terminates TLS (managed
+Postgres); the local docker-compose database does not serve TLS, so it defaults off.
+
+## Testing & CI
+
+\`\`\`bash
+npm ci                         # reproducible install from the lockfile
+npm test    -w @rr/api         # domain unit tests (vitest)
+npm run build -w @rr/frameworks-data && npm run build -w @rr/api
+\`\`\`
+
+CI (`.github/workflows/ci.yml`) runs install → lint → test → build → audit on every
+push and PR.
+
+## Documentation
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the system is architected
+  (clean architecture, security model, data flow) with diagrams and code samples.
+- [`docs/adr/`](docs/adr/README.md) — Architecture Decision Records: the trade-offs
+  behind each tech-stack decision.
+- [`docs/architecture-building-blocks.md`](docs/architecture-building-blocks.md) —
+  reusable Architecture Building Blocks (ABB → SBB mapping).
+- [`building-blocks/`](building-blocks/README.md) — the ABB/SBB catalogue (one
+  directory per ABB, each with its Solution Building Block).
+- [`docs/TESTING.md`](docs/TESTING.md) — layered testing plan; runners in
+  [`scripts/test/`](scripts/test).
+- [`scripts/diagnose/`](scripts/diagnose/README.md) — modular troubleshooting
+  ("doctor") scripts that pinpoint the failing layer.
+- [`docs/REMEDIATION.md`](docs/REMEDIATION.md) — code-review findings and fixes.
+
+## Testing & troubleshooting
+
+\`\`\`bash
+bash scripts/test/all.sh          # lint + unit + integration + regression + smoke
+bash scripts/diagnose/doctor.sh   # pinpoint where a running deployment is broken
+\`\`\`
+
 ## Security highlights
 
 - **SSO only** — OIDC against Microsoft Entra ID (Auth Code + PKCE in the SPA). No local accounts.

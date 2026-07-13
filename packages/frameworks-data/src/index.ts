@@ -62,3 +62,6 @@ export const FRAMEWORKS: Framework[] = [
 ];
 
 export const frameworkById = (id: string) => FRAMEWORKS.find(f => f.id === id);
+
+// Control catalogue (ISO 27001:2022 Annex A, CIS v8, NIST CSF 2.0).
+export { CONTROLS } from './catalogue.js';

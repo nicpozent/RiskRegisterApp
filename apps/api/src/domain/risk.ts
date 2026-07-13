@@ -24,8 +24,9 @@ export function toView(r: Risk): RiskView {
     ...r,
     inherentScore, inherentBand: band(inherentScore),
     residualScore, residualBand: band(residualScore),
-    inherentAle: r.sle && r.aro ? ale(r.sle, r.aro) : undefined,
-    residualAle: r.sle && r.residualAro != null ? ale(r.sle, r.residualAro) : undefined,
+    // Treat 0 as a valid figure (e.g. ARO 0 ⇒ ALE 0); only missing data is undefined.
+    inherentAle: r.sle != null && r.aro != null ? ale(r.sle, r.aro) : undefined,
+    residualAle: r.sle != null && r.residualAro != null ? ale(r.sle, r.residualAro) : undefined,
     reduction: reductionPct(inherentScore, residualScore),
   };
 }

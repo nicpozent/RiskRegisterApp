@@ -1,10 +1,36 @@
+# Two Ingress objects share the host/TLS but differ on rewrite: the API path
+# must strip the /api prefix (the app serves /risks, not /api/risks — matching
+# the compose edge), while the SPA is served unmodified.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: rr-ingress
+  name: rr-ingress-api
   namespace: risk-register
   annotations:
     cert-manager.io/cluster-issuer: enterprise-ca   # certificates auto-issued & rotated
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  tls:
+    - hosts: [risk.biltema-birgma.internal]
+      secretName: rr-tls
+  rules:
+    - host: risk.biltema-birgma.internal
+      http:
+        paths:
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend: { service: { name: api, port: { number: 8080 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rr-ingress-web
+  namespace: risk-register
+  annotations:
+    cert-manager.io/cluster-issuer: enterprise-ca
     nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
@@ -15,5 +41,6 @@ spec:
     - host: risk.biltema-birgma.internal
       http:
         paths:
-          - { path: /api, pathType: Prefix, backend: { service: { name: api, port: { number: 8080 } } } }
-          - { path: /,    pathType: Prefix, backend: { service: { name: web, port: { number: 80 } } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: web, port: { number: 80 } } }

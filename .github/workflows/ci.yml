@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: install → lint → test → build → scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # Reproducible install from the committed lockfile.
+      - name: Install
+        run: npm ci
+
+      # Build the shared workspace package up front so its dist/ is available to
+      # every later step (it is no longer auto-built via a 'prepare' hook).
+      - name: Build shared package
+        run: npm run build -w @rr/frameworks-data
+
+      - name: Lint
+        run: |
+          npm run lint -w @rr/api
+          npm run lint -w @rr/web
+
+      - name: Test
+        run: npm test -w @rr/api
+
+      - name: Build
+        run: |
+          npm run build -w @rr/frameworks-data
+          npm run build -w @rr/api
+          npm run build -w @rr/web
+
+      # Dependency vulnerability scan. Runtime images ship production deps only,
+      # so gate the build on prod-dependency advisories (high+).
+      - name: Audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
+
+  integration:
+    name: integration (real PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: build          # only after the cheap checks pass
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      # integration.sh boots an ephemeral Postgres via Docker (present on the
+      # runner), applies db/migrations/*.sql, then runs the integration suite.
+      - name: Integration tests
+        run: bash scripts/test/integration.sh
+
+  smoke:
+    name: smoke / e2e (docker compose)
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # smoke.sh brings the full stack up (db, api, worker, web, nginx),
+      # generates a throwaway .env + dev TLS cert, and asserts the edge
+      # contract: /api/healthz 200, /api/risks 401, / 200.
+      - name: Smoke tests
+        run: bash scripts/test/smoke.sh
+
+  manifests:
+    name: validate k8s manifests (kubeconform)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gate: every manifest must be schema-valid. -ignore-missing-schemas lets
+      # CRD-only fields (e.g. cert-manager annotations) pass; core kinds are
+      # still strictly validated.
+      - name: kubeconform
+        run: |
+          docker run --rm -v "$PWD:/work" ghcr.io/yannh/kubeconform:latest \
+            -strict -summary -ignore-missing-schemas -verbose /work/deploy/k8s
+
+  security:
+    name: supply-chain scan (trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gate: no committed secrets. This is precise and should stay green.
+      - name: Trivy secret scan (gating)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
+            --scanners secret --exit-code 1 --severity HIGH,CRITICAL --no-progress /src
+
+      # Report-only: IaC/Dockerfile misconfigurations. Surfaced in the log for
+      # triage; not gating yet to avoid churn on best-practice nits. Promote to
+      # --exit-code 1 once the backlog is clean.
+      - name: Trivy IaC misconfig scan (report-only)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:latest config \
+            --exit-code 0 --severity HIGH,CRITICAL --no-progress /src

@@ -8,12 +8,33 @@ spec:
   template:
     metadata: { labels: { app: db } }
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70            # postgres user in the official alpine image
+        fsGroup: 70
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: postgres
           image: postgres:16-alpine
           ports: [{ containerPort: 5432 }]
           envFrom: [{ secretRef: { name: rr-secrets } }]
+          # PGDATA in a subdir so the mount root (with lost+found) isn't initdb'd.
+          env:
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
           volumeMounts: [{ name: pgdata, mountPath: /var/lib/postgresql/data }]
+          resources:
+            requests: { cpu: "250m", memory: "256Mi" }
+            limits:   { cpu: "1",    memory: "1Gi" }
+          livenessProbe:
+            exec: { command: ["pg_isready", "-U", "$(POSTGRES_USER)"] }
+            initialDelaySeconds: 15
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "$(POSTGRES_USER)"] }
+            initialDelaySeconds: 5
   volumeClaimTemplates:
     - metadata: { name: pgdata }
       spec: { accessModes: ["ReadWriteOnce"], resources: { requests: { storage: 10Gi } } }
