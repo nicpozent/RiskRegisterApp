@@ -42,7 +42,9 @@ jobs:
           npm run lint -w @rr/web
 
       - name: Test
-        run: npm test -w @rr/api
+        run: |
+          npm test -w @rr/api
+          npm test -w @rr/web
 
       - name: Build
         run: |

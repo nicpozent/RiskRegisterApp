@@ -6,6 +6,26 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Web test harness (later round)
+
+- **The web tier now has a test harness.** Added Vitest + React Testing Library
+  (jsdom) to `@rr/web` with 13 component/interaction tests, wired into CI
+  (`npm test -w @rr/web` in the build job):
+  - `api.test.ts` — bearer-token attachment, `X-Total-Count` parsing,
+    `If-Match` on update, `ConflictError` on 409, generic error on other 5xx.
+  - `RiskForm` — status hidden on create / shown on edit; trimmed, typed submit
+    payload; cancel.
+  - `RiskRegister` — row rendering with bands, empty state, pager disabled logic.
+  - `RiskDetail` — load, and the **409 → friendly conflict message + reload**
+    click-through.
+- **Bug found & fixed by the harness:** on a 409 the risk-detail view set the
+  "changed by someone else" message and then immediately called `load()`, which
+  reset the error to `null` — so the message never showed. `load()` now takes a
+  `keepError` flag; the conflict path refreshes the winning version without
+  wiping the message.
+- **Accessibility:** every control in `RiskForm` is now associated with its
+  label via `htmlFor`/`id` (also what makes the form testable).
+
 ## Summary
 
 | # | Severity | Finding | Status |
