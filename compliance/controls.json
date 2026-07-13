@@ -211,12 +211,12 @@
     {
       "id": "PRV-2",
       "title": "Subject-rights and retention tooling",
-      "statement": "DSAR export and append-only-preserving erasure/retention tooling for personal data.",
-      "status": "planned",
+      "statement": "DSAR export, append-only-preserving erasure, and notification retention via the privacy CLI; supported by ROPA, DPIA, privacy notice, breach runbook and a retention schedule.",
+      "status": "implemented",
       "frameworks": {
-        "gdpr": ["Art.15", "Art.17", "Art.5(1)(e)"]
+        "gdpr": ["Art.15", "Art.17", "Art.30", "Art.33", "Art.5(1)(e)"]
       },
-      "evidence": []
+      "evidence": ["apps/api/src/privacy/service.ts", "apps/api/src/privacy/cli.ts", "docs/gdpr/ROPA.md", "docs/gdpr/breach-runbook.md"]
     },
     {
       "id": "CRY-2",

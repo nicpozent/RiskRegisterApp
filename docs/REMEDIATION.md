@@ -6,6 +6,26 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## GDPR / privacy tooling (later round)
+
+- **Data-subject tooling** (`apps/api/src/privacy/`, run via
+  `npm run privacy -w @rr/api -- <cmd>`):
+  - **DSAR export** (Art. 15/20) — a subject's `app_user` record, owned/stakeholder
+    risks, their audit events and notifications, as JSON.
+  - **Erasure** (Art. 17) — pseudonymizes the directly-identifying fields
+    (`display_name`, `email`) and stamps `erased_at` (migration `0008`), while
+    **retaining the append-only audit trail** under the legal-obligation basis
+    (Art. 17(3)); keyed to the pseudonymous `entra_oid`. Idempotent.
+  - **Retention** (Art. 5(1)(e)) — purges terminal (`sent`/`failed`) notifications
+    past a configurable window; risk/audit records are out of scope for auto-purge.
+  Covered by an integration test (export shape, erase + audit-retention +
+  idempotency, retention selectivity).
+- **Documentation pack** in `docs/gdpr/`: ROPA, DPIA (with screening), privacy
+  notice, breach runbook (Art. 33/34), and a retention schedule — drafts derived
+  from actual behaviour, for DPO sign-off.
+- Control `PRV-2` in the controls-as-code assessment flips **planned → implemented**
+  (18/20 implemented now); the CI validator confirms its evidence exists.
+
 ## SAST + controls-as-code self-assessment (later round)
 
 - **SAST beyond Trivy.** Added a **CodeQL** workflow (`javascript-typescript`,
