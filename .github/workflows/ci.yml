@@ -118,8 +118,11 @@ jobs:
 
       # Report-only: IaC/Dockerfile misconfigurations. Surfaced in the log for
       # triage; not gating yet to avoid churn on best-practice nits. Promote to
-      # --exit-code 1 once the backlog is clean.
+      # --exit-code 1 (and drop continue-on-error) once the backlog is clean.
+      # continue-on-error keeps the job green even if trivy itself errors, since
+      # --exit-code 0 only suppresses *findings*, not usage/execution failures.
       - name: Trivy IaC misconfig scan (report-only)
+        continue-on-error: true
         run: |
-          docker run --rm -v "$PWD:/src" aquasec/trivy:latest config \
-            --exit-code 0 --severity HIGH,CRITICAL --no-progress /src
+          docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
+            --scanners misconfig --exit-code 0 --severity HIGH,CRITICAL --no-progress /src
