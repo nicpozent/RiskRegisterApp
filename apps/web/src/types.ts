@@ -44,6 +44,14 @@ export interface ControlView {
   group?: string; help?: string; isCustom: boolean; mappedCount?: number;
 }
 
+// Treatment actions (mirrors API domain/treatment.ts).
+export type ActionStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
+export const ACTION_STATUSES: ActionStatus[] = ['open', 'in_progress', 'done', 'cancelled'];
+export interface TreatmentAction {
+  id: string; riskId: string; description: string; ownerId?: string;
+  dueDate?: string; status: ActionStatus; createdAt: string; updatedAt: string;
+}
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =

@@ -3,7 +3,7 @@ import { pool } from '../../infrastructure/db.js';
 import { RiskService } from '../../application/risk.service.js';
 import { requireRole, Roles, AnyRole } from '../middleware/rbac.js';
 import { asyncHandler } from '../async-handler.js';
-import { createSchema, updateSchema, listQuerySchema } from './risk.schemas.js';
+import { createSchema, updateSchema, listQuerySchema, actionCreateSchema, actionUpdateSchema } from './risk.schemas.js';
 
 const svc = new RiskService(pool);
 export const risks = Router();
@@ -61,6 +61,29 @@ risks.post('/:id/accept', requireRole(Roles.Admin, Roles.Ciso), asyncHandler(asy
   const accepted = await svc.accept(req.params.id, req.user!);
   if (!accepted) return res.status(404).json({ error: 'not found' });
   res.json(accepted);
+}));
+
+// ---- Treatment actions ----
+risks.get('/:id/actions', requireRole(...AnyRole), asyncHandler(async (req, res) => {
+  const list = await svc.listActions(req.params.id);
+  if (!list) return res.status(404).json({ error: 'not found' });
+  res.json(list);
+}));
+
+risks.post('/:id/actions', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
+  const parsed = actionCreateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const created = await svc.addAction(req.params.id, parsed.data, req.user!);
+  if (!created) return res.status(404).json({ error: 'not found' });
+  res.status(201).json(created);
+}));
+
+risks.patch('/:id/actions/:actionId', requireRole(...WRITE_ROLES), asyncHandler(async (req, res) => {
+  const parsed = actionUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const updated = await svc.updateAction(req.params.id, req.params.actionId, parsed.data, req.user!);
+  if (!updated) return res.status(404).json({ error: 'not found' });
+  res.json(updated);
 }));
 
 risks.get('/:id/controls', requireRole(...AnyRole), asyncHandler(async (req, res) => {

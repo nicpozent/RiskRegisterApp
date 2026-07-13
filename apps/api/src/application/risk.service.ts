@@ -134,6 +134,44 @@ export class RiskService {
     });
   }
 
+  // ---- Treatment actions ----
+
+  /** Actions for a risk (null if the risk doesn't exist). */
+  async listActions(riskId: string) {
+    const risk = await this.reads.findById(riskId);
+    if (!risk) return null;
+    return this.reads.actionsFor(riskId);
+  }
+
+  async addAction(riskId: string, input: { description: string; ownerId?: string; dueDate?: string; status?: string }, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      await this.assertCanModify(repo, actor, risk);
+      const action = await repo.insertAction(riskId, input);
+      await audit(tx, actor.oid, 'created', 'treatment_action', action.id, null, action);
+      await emit(tx, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: 'treatment action added' });
+      return action;
+    });
+  }
+
+  async updateAction(riskId: string, actionId: string, patch: { description?: string; ownerId?: string; dueDate?: string; status?: string }, actor: Actor) {
+    return this.withTx(async (repo, tx) => {
+      await repo.ensureUser(actor);
+      const risk = await repo.findById(riskId);
+      if (!risk) return null;
+      await this.assertCanModify(repo, actor, risk);
+      const before = await repo.actionsFor(riskId);
+      const after = await repo.updateAction(riskId, actionId, patch);
+      if (!after) return null;
+      await audit(tx, actor.oid, 'modified', 'treatment_action', actionId,
+        before.find((a) => a.id === actionId) ?? null, after);
+      await emit(tx, { type: 'risk.updated', riskId, actorOid: actor.oid, summary: `treatment action ${Object.keys(patch).join(', ')}` });
+      return after;
+    });
+  }
+
   /** Map a control to a risk and notify owner + stakeholders. */
   async mapControl(riskId: string, controlId: string, actor: Actor) {
     return this.withTx(async (repo, tx) => {

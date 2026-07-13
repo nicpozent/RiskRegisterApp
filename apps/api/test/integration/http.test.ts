@@ -154,6 +154,33 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
       .set('Authorization', bearer(viewer)).expect(404);
   });
 
+  it('adds, lists and updates treatment actions on a risk', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const id = created.body.id;
+
+    const empty = await request(app).get(`/risks/${id}/actions`).set('Authorization', bearer(viewer)).expect(200);
+    expect(empty.body).toHaveLength(0);
+
+    const action = await request(app).post(`/risks/${id}/actions`).set('Authorization', bearer(admin))
+      .send({ description: 'Encrypt nightly backups', dueDate: '2026-09-01' }).expect(201);
+    expect(action.body).toMatchObject({ description: 'Encrypt nightly backups', status: 'open' });
+
+    const listed = await request(app).get(`/risks/${id}/actions`).set('Authorization', bearer(viewer)).expect(200);
+    expect(listed.body).toHaveLength(1);
+
+    const done = await request(app).patch(`/risks/${id}/actions/${action.body.id}`).set('Authorization', bearer(admin))
+      .send({ status: 'done' }).expect(200);
+    expect(done.body.status).toBe('done');
+  });
+
+  it('rejects an invalid treatment-action status (400) and unknown risk (404)', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    await request(app).post(`/risks/${created.body.id}/actions`).set('Authorization', bearer(admin))
+      .send({ description: 'A valid action description', status: 'bogus' }).expect(400);
+    await request(app).get('/risks/00000000-0000-0000-0000-000000000000/actions')
+      .set('Authorization', bearer(viewer)).expect(404);
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))
