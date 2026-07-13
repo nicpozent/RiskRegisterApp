@@ -69,6 +69,15 @@ export const Risks = {
   },
 };
 
+export const Reports = {
+  async registerCsv(): Promise<Blob> {
+    return (await request('/reports/register.csv')).blob();
+  },
+  async evidence(id: string): Promise<Blob> {
+    return (await request(`/reports/risk/${id}`)).blob();
+  },
+};
+
 export const Admin = {
   async audit(opts: { entity?: string; limit?: number; offset?: number } = {}): Promise<Page<AuditEvent>> {
     const p = new URLSearchParams();

@@ -7,6 +7,7 @@ import { NewRisk } from './components/NewRisk.js';
 import { Dashboard } from './components/Dashboard.js';
 import { ControlLibrary } from './components/ControlLibrary.js';
 import { Admin } from './components/Admin.js';
+import { Reports } from './components/Reports.js';
 import { ADMIN_ROLES } from './types.js';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
               <a href="#/dashboard" className={route.name === 'dashboard' ? 'active' : ''}>Dashboard</a>
               <a href="#/" className={route.name === 'register' ? 'active' : ''}>Register</a>
               <a href="#/controls" className={route.name === 'controls' ? 'active' : ''}>Controls</a>
+              <a href="#/reports" className={route.name === 'reports' ? 'active' : ''}>Reports</a>
               {isAdmin && <a href="#/admin" className={route.name === 'admin' ? 'active' : ''}>Admin</a>}
             </nav>
             <span className="who">{account?.name ?? account?.username}</span>
@@ -52,6 +54,7 @@ export default function App() {
           {route.name === 'register' && <RiskRegister />}
           {route.name === 'dashboard' && <Dashboard />}
           {route.name === 'controls' && <ControlLibrary />}
+          {route.name === 'reports' && <Reports />}
           {route.name === 'admin' && <Admin />}
           {route.name === 'new' && <NewRisk />}
           {route.name === 'risk' && <RiskDetail id={route.id} />}

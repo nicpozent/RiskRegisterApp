@@ -28,6 +28,20 @@ export class RiskService {
   }
   async get(id: string) { const r = await this.reads.findById(id); return r ? toView(r) : null; }
 
+  /** All risk views for reporting/export (bounded to a sane cap). */
+  async exportRegister(cap = 5000) {
+    const rows = await this.reads.findAll(cap, 0);
+    return rows.map(toView);
+  }
+
+  /** Consolidated evidence pack: the risk plus its mapped controls and actions. */
+  async report(id: string) {
+    const risk = await this.get(id);
+    if (!risk) return null;
+    const [controls, actions] = await Promise.all([this.reads.controlsFor(id), this.reads.actionsFor(id)]);
+    return { risk, controls, actions };
+  }
+
   /** Register-wide dashboard aggregates (counts by band/status/treatment, ALE totals). */
   async summary(): Promise<RiskSummary> {
     const raw = await this.reads.summary();

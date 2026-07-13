@@ -200,6 +200,27 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     expect(res.body.map((u: { email: string }) => u.email)).toContain('dir@b.com');
   });
 
+  it('exports the register as CSV', async () => {
+    await request(app).post('/risks').set('Authorization', bearer(admin))
+      .send({ ...validBody, title: 'Title, with comma' }).expect(201);
+    const res = await request(app).get('/reports/register.csv').set('Authorization', bearer(viewer)).expect(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.headers['content-disposition']).toMatch(/risk-register\.csv/);
+    expect(res.text.split('\r\n')[0]).toBe(
+      'ref,title,category,status,treatment,inherentScore,inherentBand,residualScore,residualBand,inherentAle,residualAle,reduction,nextReview');
+    // A comma in the title must be quoted (RFC-4180), not split the row.
+    expect(res.text).toContain('"Title, with comma"');
+  });
+
+  it('produces a per-risk evidence pack (404 for unknown)', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const res = await request(app).get(`/reports/risk/${created.body.id}`).set('Authorization', bearer(viewer)).expect(200);
+    expect(res.body).toMatchObject({ risk: { id: created.body.id }, controls: [], actions: [] });
+    expect(res.body.generatedAt).toBeTruthy();
+    await request(app).get('/reports/risk/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', bearer(viewer)).expect(404);
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))
