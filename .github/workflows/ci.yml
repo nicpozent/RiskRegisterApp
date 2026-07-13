@@ -128,3 +128,17 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
             --scanners misconfig --exit-code 0 --severity HIGH,CRITICAL --no-progress /src
+
+      # Generate a CycloneDX SBOM (from lockfiles) and keep it as a build
+      # artifact — a compliance/provenance record for the GRC product itself.
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:latest fs \
+            --format cyclonedx --output /src/sbom.cdx.json --no-progress /src
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          if-no-files-found: error
