@@ -9,18 +9,44 @@ const COLS = `id, ref, title, description, category, owner_id as "ownerId",
 export class RiskRepository {
   constructor(private db: Pool) {}
 
-  private async hydrate(row: any): Promise<Risk> {
+  /** Attach controlIds/stakeholderIds to many rows in 2 queries total (no N+1). */
+  private async hydrateMany(rows: any[]): Promise<Risk[]> {
+    if (rows.length === 0) return [];
+    const ids = rows.map(r => r.id);
     const [ctrls, stake] = await Promise.all([
-      this.db.query('SELECT control_id FROM risk_control WHERE risk_id=$1', [row.id]),
-      this.db.query('SELECT user_id FROM risk_stakeholder WHERE risk_id=$1', [row.id]),
+      this.db.query('SELECT risk_id, control_id FROM risk_control WHERE risk_id = ANY($1)', [ids]),
+      this.db.query('SELECT risk_id, user_id FROM risk_stakeholder WHERE risk_id = ANY($1)', [ids]),
     ]);
-    return { ...row, controlIds: ctrls.rows.map(r => r.control_id),
-             stakeholderIds: stake.rows.map(r => r.user_id) };
+    const group = (qrows: any[], key: string) => {
+      const m = new Map<string, string[]>();
+      for (const r of qrows) {
+        const arr = m.get(r.risk_id);
+        if (arr) arr.push(r[key]); else m.set(r.risk_id, [r[key]]);
+      }
+      return m;
+    };
+    const byControl = group(ctrls.rows, 'control_id');
+    const byStake = group(stake.rows, 'user_id');
+    return rows.map(row => ({
+      ...row,
+      controlIds: byControl.get(row.id) ?? [],
+      stakeholderIds: byStake.get(row.id) ?? [],
+    }));
   }
 
-  async findAll(): Promise<Risk[]> {
-    const { rows } = await this.db.query(`SELECT ${COLS} FROM risk ORDER BY ref`);
-    return Promise.all(rows.map(r => this.hydrate(r)));
+  private async hydrate(row: any): Promise<Risk> {
+    return (await this.hydrateMany([row]))[0];
+  }
+
+  async count(): Promise<number> {
+    const { rows } = await this.db.query('SELECT count(*)::int n FROM risk');
+    return rows[0].n;
+  }
+
+  async findAll(limit = 50, offset = 0): Promise<Risk[]> {
+    const { rows } = await this.db.query(
+      `SELECT ${COLS} FROM risk ORDER BY ref LIMIT $1 OFFSET $2`, [limit, offset]);
+    return this.hydrateMany(rows);
   }
   async findById(id: string): Promise<Risk | null> {
     const { rows } = await this.db.query(`SELECT ${COLS} FROM risk WHERE id=$1`, [id]);

@@ -46,6 +46,17 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
+  it('paginates GET /risks and reports the total in X-Total-Count', async () => {
+    for (let i = 0; i < 3; i++) await repo.insert({ ...validBody, status: 'open', stakeholderIds: [], controlIds: [] });
+    const res = await request(app).get('/risks?limit=2&offset=0').set('Authorization', bearer(viewer)).expect(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.headers['x-total-count']).toBe('3');
+  });
+
+  it('rejects an invalid pagination query (400)', async () => {
+    await request(app).get('/risks?limit=9999').set('Authorization', bearer(viewer)).expect(400);
+  });
+
   it('denies a write to a read-only role (403)', async () => {
     await request(app).post('/risks').set('Authorization', bearer(viewer)).send(validBody).expect(403);
   });

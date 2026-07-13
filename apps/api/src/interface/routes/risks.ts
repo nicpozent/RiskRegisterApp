@@ -3,14 +3,19 @@ import { pool } from '../../infrastructure/db.js';
 import { RiskService } from '../../application/risk.service.js';
 import { requireRole, Roles, AnyRole } from '../middleware/rbac.js';
 import { asyncHandler } from '../async-handler.js';
-import { createSchema, updateSchema } from './risk.schemas.js';
+import { createSchema, updateSchema, listQuerySchema } from './risk.schemas.js';
 
 const svc = new RiskService(pool);
 export const risks = Router();
 
 // Reads require *some* recognized role (deny tokens with an empty roles claim).
-risks.get('/', requireRole(...AnyRole), asyncHandler(async (_req, res) => {
-  res.json(await svc.list());
+risks.get('/', requireRole(...AnyRole), asyncHandler(async (req, res) => {
+  const q = listQuerySchema.safeParse(req.query);
+  if (!q.success) return res.status(400).json({ error: q.error.flatten() });
+  const { items, total } = await svc.list(q.data.limit, q.data.offset);
+  // Total count in a header keeps the body a plain array (backward-compatible).
+  res.setHeader('X-Total-Count', String(total));
+  res.json(items);
 }));
 risks.get('/:id', requireRole(...AnyRole), asyncHandler(async (req, res) => {
   const r = await svc.get(req.params.id);

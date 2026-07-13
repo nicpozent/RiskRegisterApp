@@ -49,4 +49,26 @@ describe.skipIf(!HAS_DB)('RiskRepository (integration)', () => {
     expect(await repo.userIdByOid('oid-123')).toBe(uid);
     expect(await repo.userIdByOid('missing')).toBeNull();
   });
+
+  it('counts and paginates in ref order', async () => {
+    for (let i = 0; i < 5; i++) await repo.insert({ ...base, title: `R${i}` });
+    expect(await repo.count()).toBe(5);
+    const page1 = await repo.findAll(2, 0);
+    const page2 = await repo.findAll(2, 2);
+    expect(page1.map(r => r.ref)).toEqual(['RR-001', 'RR-002']);
+    expect(page2.map(r => r.ref)).toEqual(['RR-003', 'RR-004']);
+  });
+
+  it('batch-hydrates relations to the correct risk (no N+1 cross-talk)', async () => {
+    const withStake = await repo.insert({ ...base, title: 'Has stakeholder' });
+    const without = await repo.insert({ ...base, title: 'No stakeholder' });
+    const uid = await seedUser('stake-oid', 'stake@b.com');
+    await pool.query('INSERT INTO risk_stakeholder (risk_id, user_id) VALUES ($1,$2)', [withStake.id, uid]);
+
+    const all = await repo.findAll(50, 0);
+    const a = all.find(r => r.id === withStake.id)!;
+    const b = all.find(r => r.id === without.id)!;
+    expect(a.stakeholderIds).toEqual([uid]);
+    expect(b.stakeholderIds).toEqual([]);
+  });
 });

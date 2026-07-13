@@ -10,7 +10,10 @@ export class RiskService {
   private repo: RiskRepository;
   constructor(private db: Pool) { this.repo = new RiskRepository(db); }
 
-  async list() { return (await this.repo.findAll()).map(toView); }
+  async list(limit = 50, offset = 0) {
+    const [rows, total] = await Promise.all([this.repo.findAll(limit, offset), this.repo.count()]);
+    return { items: rows.map(toView), total };
+  }
   async get(id: string) { const r = await this.repo.findById(id); return r ? toView(r) : null; }
 
   /** Throw 403 unless the actor may modify this specific risk (object-level authz). */

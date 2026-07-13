@@ -18,7 +18,7 @@ export function buildApp() {
   app.disable('x-powered-by');
   app.use(helmet());
   // Bearer tokens are sent in the Authorization header, not cookies — no credentials.
-  app.use(cors({ origin: env.CORS_ORIGIN }));
+  app.use(cors({ origin: env.CORS_ORIGIN, exposedHeaders: ['X-Total-Count'] }));
   app.use(express.json({ limit: '256kb' }));
   // Never log bearer tokens / cookies.
   app.use(pinoHttp({ redact: ['req.headers.authorization', 'req.headers.cookie'] }));
