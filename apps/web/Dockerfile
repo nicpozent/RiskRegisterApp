@@ -19,7 +19,7 @@ COPY apps/web apps/web
 RUN npm run build -w @rr/web
 
 # ---- runtime (unprivileged nginx, non-root, listens on 8080) ----
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 # Base image already runs as non-root uid 101; make it explicit (Trivy DS-0002).
