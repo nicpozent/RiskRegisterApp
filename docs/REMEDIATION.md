@@ -6,6 +6,17 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Dashboard charts (later round)
+
+- **Real inline-SVG charts** replace the dashboard's CSS bars (`Charts.tsx`):
+  horizontal bar charts with a baseline, a max gridline, rounded data-ends,
+  0/max axis ticks and end-of-bar value labels. Still **dependency-light** (no
+  charting library) and theme-aware (fills are the app's CSS custom properties).
+  Band charts use the app's ordered **severity ramp** (Low→Critical) — always
+  paired with direct band + value labels (the accessible secondary encoding);
+  status/treatment use a single accent hue with identity on the axis. Verified
+  by rendering a screenshot.
+
 ## Browser e2e + load benchmark (later round)
 
 - **Playwright browser e2e** (`apps/web/e2e/`, `npm run e2e -w @rr/web`): builds
