@@ -89,6 +89,15 @@ npm run test:int  -w @rr/api          # expects DATABASE_URL
 npm run test:regression -w @rr/api
 ```
 
+## Coverage
+
+`npm test -w @rr/api` runs with `--coverage` (v8) and **gates** at 90% stmts/
+lines/funcs, 85% branches — scoped to the pure logic the unit suite owns
+(`domain/**`, `middleware/rbac.ts`, `routes/risk.schemas.ts`). The
+service/repository/HTTP/worker layers are covered by the integration suite
+(real Postgres), so they're intentionally out of the unit-coverage scope rather
+than counted as uncovered. HTML report in `apps/api/coverage/` (gitignored).
+
 ## Conventions
 
 - **Naming:** unit/integration files end `*.test.ts`. Unit live in `src/`,
