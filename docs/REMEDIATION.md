@@ -6,6 +6,22 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## SAST + controls-as-code self-assessment (later round)
+
+- **SAST beyond Trivy.** Added a **CodeQL** workflow (`javascript-typescript`,
+  `security-and-quality` queries) that runs on every PR to `main`, on push, and
+  weekly — semantic vulnerability analysis over the TS/JS, complementing Trivy's
+  IaC/secret scanning.
+- **Controls-as-code self-assessment.** `compliance/controls.json` records the
+  application's **own** controls (20: 17 implemented, 3 planned) mapped to
+  ISO 27001 / NIST CSF / GDPR / OWASP ASVS clauses, each with evidence pointers
+  into the repo. `compliance/validate.mjs` runs in CI and **fails the build** if
+  the schema is invalid or any implemented control's evidence path is missing —
+  so the assessment can't drift from the code. Human-readable matrix in
+  `docs/compliance/control-assessment.md`; ISO 42001 / EU AI Act explicitly
+  scoped out (no AI). This is distinct from the in-app 42-framework control
+  *catalogue* (product reference data).
+
 ## Web test harness (later round)
 
 - **The web tier now has a test harness.** Added Vitest + React Testing Library

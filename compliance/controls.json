@@ -1,0 +1,244 @@
+{
+  "schemaVersion": "1.0",
+  "subject": "Birgma Risk Register",
+  "description": "Controls-as-code self-assessment: the application's OWN security and governance controls, mapped to framework clauses with evidence pointers into the repository. Validated in CI by compliance/validate.mjs.",
+  "scopedOut": [
+    {
+      "framework": "ISO/IEC 42001 (AI management)",
+      "reason": "The system contains no AI/ML component; an AI management system is not applicable."
+    },
+    {
+      "framework": "EU AI Act",
+      "reason": "No AI system is placed on the market or put into service; obligations do not apply."
+    }
+  ],
+  "controls": [
+    {
+      "id": "IAM-1",
+      "title": "Authentication via Microsoft Entra ID (OIDC + PKCE)",
+      "statement": "Users authenticate with Entra ID using the Authorization-Code flow with PKCE; the API validates RS256 access tokens against JWKS, pinned to issuer, audience and tenant.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.5.15", "A.5.16", "A.8.5"],
+        "nistCsf": ["PR.AA-01", "PR.AA-03"],
+        "owaspAsvs": ["V2.1", "V3.5"],
+        "gdpr": ["Art.32"]
+      },
+      "evidence": ["apps/api/src/infrastructure/auth/entra.ts", "apps/web/src/authConfig.ts"]
+    },
+    {
+      "id": "IAM-2",
+      "title": "Role-based access control (RBAC)",
+      "statement": "Every mutating route is gated by a role check derived from the token's role claims; reads require any recognized role.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.5.15", "A.8.2", "A.8.3"],
+        "nistCsf": ["PR.AA-05"],
+        "owaspAsvs": ["V4.1"]
+      },
+      "evidence": ["apps/api/src/interface/middleware/rbac.ts", "apps/api/src/domain/roles.ts"]
+    },
+    {
+      "id": "IAM-3",
+      "title": "Object-level authorization (ownership)",
+      "statement": "Beyond RBAC, writes to a risk require ownership/stakeholder membership unless the actor holds an elevated role; enforced server-side and integration-tested (no IDOR).",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.3"],
+        "nistCsf": ["PR.AA-05"],
+        "owaspAsvs": ["V4.2"]
+      },
+      "evidence": ["apps/api/src/domain/roles.ts", "apps/api/src/application/risk.service.ts"]
+    },
+    {
+      "id": "INP-1",
+      "title": "Input validation and output encoding",
+      "statement": "All request bodies and query parameters are parsed and validated with Zod schemas at the interface boundary; invalid input is rejected with 400.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.26"],
+        "nistCsf": ["PR.PS-06"],
+        "owaspAsvs": ["V5.1"]
+      },
+      "evidence": ["apps/api/src/interface/routes/risk.schemas.ts", "apps/api/src/interface/routes/controls.ts"]
+    },
+    {
+      "id": "CRY-1",
+      "title": "Encryption in transit (TLS)",
+      "statement": "The NGINX edge terminates TLS for all client traffic; the database connection supports verified TLS via DATABASE_SSL.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.24"],
+        "nistCsf": ["PR.DS-02"],
+        "gdpr": ["Art.32"]
+      },
+      "evidence": ["deploy/nginx/nginx.conf", "apps/api/src/infrastructure/db.ts"]
+    },
+    {
+      "id": "AUD-1",
+      "title": "Append-only audit trail",
+      "statement": "Every business mutation writes an immutable audit_event in the same transaction; UPDATE/DELETE are revoked from the application role and blocked by a DB trigger.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.15"],
+        "nistCsf": ["DE.AE-03", "PR.PS-04"],
+        "gdpr": ["Art.30"]
+      },
+      "evidence": ["db/migrations/0003_audit_append_only.sql", "apps/api/src/infrastructure/audit.ts"]
+    },
+    {
+      "id": "AUD-2",
+      "title": "Least-privilege database role",
+      "statement": "The application connects as a NOLOGIN-derived rr_api role with only the grants it needs; migrations/seed run as the owner.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.2", "A.8.4"],
+        "nistCsf": ["PR.AA-05"]
+      },
+      "evidence": ["db/migrations/0005_least_privilege_role.sql"]
+    },
+    {
+      "id": "INT-1",
+      "title": "Optimistic concurrency (data integrity)",
+      "statement": "Risk edits carry a version; an If-Match check-and-set rejects stale writes with 409 instead of silently overwriting concurrent changes.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.26"],
+        "owaspAsvs": ["V11.1"]
+      },
+      "evidence": ["db/migrations/0006_risk_version.sql", "apps/api/src/infrastructure/risk.repository.ts"]
+    },
+    {
+      "id": "APP-1",
+      "title": "Security headers, CORS and rate limiting",
+      "statement": "Helmet sets hardening headers; CORS is a single-origin allowlist; a per-window rate limiter caps request volume; JSON bodies are capped at 256 kb.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.9", "A.8.23"],
+        "owaspAsvs": ["V14.4"]
+      },
+      "evidence": ["apps/api/src/interface/http.ts", "apps/api/src/interface/middleware/rate-limit.ts"]
+    },
+    {
+      "id": "LOG-1",
+      "title": "Structured logging with correlation and redaction",
+      "statement": "pino-http emits structured logs, honours/mints an X-Request-Id for correlation, and redacts authorization and cookie headers.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.15", "A.8.16"],
+        "nistCsf": ["DE.AE-03"]
+      },
+      "evidence": ["apps/api/src/interface/http.ts"]
+    },
+    {
+      "id": "MON-1",
+      "title": "Monitoring and health checks",
+      "statement": "API and worker expose Prometheus /metrics (RED + runtime + queue depth) and DB-checked readiness/liveness endpoints.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.16"],
+        "nistCsf": ["DE.CM-01"]
+      },
+      "evidence": ["apps/api/src/interface/metrics.ts", "apps/worker/src/metrics.ts", "apps/worker/src/server.ts"]
+    },
+    {
+      "id": "SEC-1",
+      "title": "Secrets management",
+      "statement": "No secrets are committed; runtime configuration is injected from the environment / a vault, documented via .env.example and ADR-0015, and CI fails on committed secrets.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.5.17", "A.8.24"],
+        "nistCsf": ["PR.AA-01"]
+      },
+      "evidence": [".env.example", "docs/adr/0015-secrets-management-vault.md", ".github/workflows/ci.yml"]
+    },
+    {
+      "id": "SUP-1",
+      "title": "Supply-chain scanning and SBOM",
+      "statement": "Reproducible npm ci installs; Dependabot updates; npm audit and Trivy gates on production advisories; a CycloneDX SBOM is produced in CI.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.8", "A.8.30", "A.5.21"],
+        "nistCsf": ["ID.RA-01", "GV.SC-07"]
+      },
+      "evidence": [".github/workflows/ci.yml", ".github/dependabot.yml"]
+    },
+    {
+      "id": "SAST-1",
+      "title": "Static application security testing",
+      "statement": "CodeQL analyses the TypeScript/JavaScript for semantic vulnerability patterns on every PR and weekly; Trivy scans IaC/config for misconfiguration.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.28", "A.8.25"],
+        "nistCsf": ["PR.PS-06"],
+        "owaspAsvs": ["V1.1"]
+      },
+      "evidence": [".github/workflows/codeql.yml", ".github/workflows/ci.yml"]
+    },
+    {
+      "id": "RUN-1",
+      "title": "Hardened container runtime",
+      "statement": "Services ship as distroless, non-root images; k8s runs them read-only-rootfs with all capabilities dropped and seccomp RuntimeDefault.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.9"],
+        "nistCsf": ["PR.PS-01"]
+      },
+      "evidence": ["apps/api/Dockerfile", "deploy/k8s/api-deployment.yaml"]
+    },
+    {
+      "id": "NET-1",
+      "title": "Network segmentation",
+      "statement": "A default-deny NetworkPolicy restricts pod-to-pod traffic; only the API and worker may reach the database.",
+      "status": "implemented",
+      "frameworks": {
+        "iso27001": ["A.8.20", "A.8.22"],
+        "nistCsf": ["PR.IR-01"]
+      },
+      "evidence": ["deploy/k8s/networkpolicy.yaml"]
+    },
+    {
+      "id": "PRV-1",
+      "title": "Data minimization",
+      "statement": "Only the object id, display name and email are provisioned from token claims; no broader directory data is stored.",
+      "status": "implemented",
+      "frameworks": {
+        "gdpr": ["Art.5(1)(c)"],
+        "iso27001": ["A.8.10"]
+      },
+      "evidence": ["apps/api/src/infrastructure/risk.repository.ts"]
+    },
+    {
+      "id": "PRV-2",
+      "title": "Subject-rights and retention tooling",
+      "statement": "DSAR export and append-only-preserving erasure/retention tooling for personal data.",
+      "status": "planned",
+      "frameworks": {
+        "gdpr": ["Art.15", "Art.17", "Art.5(1)(e)"]
+      },
+      "evidence": []
+    },
+    {
+      "id": "CRY-2",
+      "title": "Encryption at rest",
+      "statement": "Host/volume disk encryption and customer-managed keys for the database and object storage.",
+      "status": "planned",
+      "frameworks": {
+        "gdpr": ["Art.32"],
+        "iso27001": ["A.8.24"]
+      },
+      "evidence": []
+    },
+    {
+      "id": "IAM-4",
+      "title": "Multi-factor authentication / Conditional Access",
+      "statement": "MFA and Conditional Access enforced at the identity provider (Entra) for all users.",
+      "status": "planned",
+      "frameworks": {
+        "iso27001": ["A.8.5"],
+        "nistCsf": ["PR.AA-03"]
+      },
+      "evidence": []
+    }
+  ]
+}
