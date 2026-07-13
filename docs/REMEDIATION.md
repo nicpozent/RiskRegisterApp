@@ -1,7 +1,7 @@
 # Code Review & Remediation Log
 
 This document records the security/architecture review of the Risk Register
-platform and the fixes applied on branch `claude/code-review-best-practices-r18yvr`.
+platform and the fixes applied during the code-review remediation effort.
 Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
