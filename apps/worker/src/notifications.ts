@@ -34,8 +34,9 @@ export async function processQueue(db: Pool) {
     try {
       const { rows: people } = await db.query(
         `SELECT u.email FROM app_user u
-           WHERE u.id = (SELECT owner_id FROM risk WHERE id=$1)
-              OR u.id IN (SELECT user_id FROM risk_stakeholder WHERE risk_id=$1)`, [n.risk_id]);
+           WHERE (u.id = (SELECT owner_id FROM risk WHERE id=$1)
+                  OR u.id IN (SELECT user_id FROM risk_stakeholder WHERE risk_id=$1))
+             AND u.email IS NOT NULL`, [n.risk_id]);
       const { rows: r } = await db.query('SELECT ref, title FROM risk WHERE id=$1', [n.risk_id]);
       const risk = r[0]; const to = people.map(p => p.email);
       if (risk && to.length) {

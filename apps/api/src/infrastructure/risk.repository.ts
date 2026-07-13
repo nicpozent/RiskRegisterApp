@@ -82,6 +82,22 @@ export class RiskRepository {
     const { rows } = await this.db.query('SELECT id FROM app_user WHERE entra_oid=$1', [oid]);
     return rows[0]?.id ?? null;
   }
+
+  /**
+   * Just-in-time provision the acting principal into app_user (upsert by
+   * entra_oid). Keeps display_name fresh; only overwrites email when a new one
+   * is present so a directory-synced address isn't clobbered by a null claim.
+   */
+  async ensureUser(p: { oid: string; name?: string; email?: string }): Promise<string> {
+    const { rows } = await this.db.query(
+      `INSERT INTO app_user (entra_oid, display_name, email) VALUES ($1,$2,$3)
+         ON CONFLICT (entra_oid) DO UPDATE
+           SET display_name = EXCLUDED.display_name,
+               email = COALESCE(EXCLUDED.email, app_user.email)
+         RETURNING id`,
+      [p.oid, p.name || p.oid, p.email ?? null]);
+    return rows[0].id;
+  }
   async linkControl(riskId: string, controlId: string) {
     await this.db.query(
       `INSERT INTO risk_control (risk_id, control_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,

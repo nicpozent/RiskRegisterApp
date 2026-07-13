@@ -11,7 +11,7 @@ export const AnyRole = Object.values(Roles);
 /** Roles with authority over any risk regardless of ownership. */
 export const ELEVATED = [Roles.Admin, Roles.Ciso] as const;
 
-export interface Actor { oid: string; roles: string[]; }
+export interface Actor { oid: string; roles: string[]; name?: string; email?: string; }
 
 export function isElevated(roles: string[]): boolean {
   return roles.some(r => (ELEVATED as readonly string[]).includes(r));
