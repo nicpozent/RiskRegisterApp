@@ -26,6 +26,7 @@ earlier one rather than editing it.
 | [0014](0014-kubernetes-deployment-topology.md) | Kubernetes deployment topology | Accepted |
 | [0015](0015-secrets-management-vault.md) | Secrets management via vault / workload identity | Accepted |
 | [0016](0016-availability-and-dr-posture.md) | Availability/DR: single instance + PITR, not active-active HA | Accepted |
+| [0017](0017-personnel-module-scope.md) | Personnel module (team SWOT + development plans): isolated, encrypted, DPIA-gated | Accepted |
 
 See also [ARCHITECTURE.md](../ARCHITECTURE.md) and the
 [Architecture Building Blocks](../architecture-building-blocks.md).
