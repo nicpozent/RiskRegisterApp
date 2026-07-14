@@ -1,5 +1,7 @@
+import { randomBytes } from 'node:crypto';
 import { Risk } from '../domain/risk.js';
 import type { Queryable } from './db.js';
+import { getEncryptor, aesEncrypt, aesDecrypt } from './crypto/encryptor.js';
 
 /** Raw grouped aggregates from the DB; the service maps scores → bands. */
 export interface RiskSummaryRaw {
@@ -43,11 +45,13 @@ export class RiskRepository {
     };
     const byControl = group(ctrls.rows, 'control_id');
     const byStake = group(stake.rows, 'user_id');
-    return rows.map(row => ({
+    const enc = getEncryptor();
+    return Promise.all(rows.map(async row => ({
       ...row,
+      description: row.description == null ? row.description : await enc.decrypt(row.description),
       controlIds: byControl.get(row.id) ?? [],
       stakeholderIds: byStake.get(row.id) ?? [],
-    }));
+    })));
   }
 
   private async hydrate(row: any): Promise<Risk> {
@@ -95,8 +99,15 @@ export class RiskRepository {
     const { rows } = await this.db.query(`SELECT ${COLS} FROM risk WHERE id=$1`, [id]);
     return rows[0] ? this.hydrate(rows[0]) : null;
   }
+  /** Encrypt at-rest fields (description) before a write; returns a shallow copy. */
+  private async encryptWrite<T extends { description?: string | null }>(p: T): Promise<T> {
+    if (!('description' in p) || p.description == null || p.description === '') return p;
+    return { ...p, description: await getEncryptor().encrypt(p.description) };
+  }
+
   async insert(r: Omit<Risk,'id'|'ref'|'version'>): Promise<Risk> {
     const ref = await this.nextRef();
+    r = await this.encryptWrite(r);
     const { rows } = await this.db.query(
       `INSERT INTO risk (ref,title,description,category,owner_id,inherent_l,inherent_i,
           residual_l,residual_i,treatment,status,sle,aro,residual_aro,next_review)
@@ -119,6 +130,7 @@ export class RiskRepository {
 
   /** Last-write-wins update (bumps version). */
   async update(id: string, p: Partial<Risk>): Promise<Risk | null> {
+    p = await this.encryptWrite(p);
     const vals: unknown[] = [];
     const sets = this.buildSets(p, vals);
     if (!sets.length) return this.findById(id);
@@ -134,6 +146,7 @@ export class RiskRepository {
    * The conditional WHERE makes the check-and-set atomic (no TOCTOU).
    */
   async updateIfVersion(id: string, p: Partial<Risk>, expectedVersion: number): Promise<'notfound' | 'conflict' | Risk> {
+    p = await this.encryptWrite(p);
     const vals: unknown[] = [];
     const sets = this.buildSets(p, vals);
     vals.push(id); const idParam = vals.length;
@@ -208,19 +221,36 @@ export class RiskRepository {
     return rows;
   }
   async insertEvidence(riskId: string, e: { filename: string; contentType: string; sizeBytes: number; data: Buffer; uploadedBy: string | null }) {
+    // Envelope encryption for the (potentially large) blob: a per-file data key
+    // encrypts the bytes locally; only that 32-byte key is wrapped by the KMS.
+    const enc = getEncryptor();
+    let data = e.data;
+    let dek: string | null = null;
+    if (enc.enabled) {
+      const key = randomBytes(32);
+      data = aesEncrypt(key, e.data);
+      dek = await enc.wrapKey(key);
+    }
     const { rows } = await this.db.query(
-      `INSERT INTO evidence (risk_id, filename, content_type, size_bytes, data, uploaded_by)
-         VALUES ($1,$2,$3,$4,$5,$6)
+      `INSERT INTO evidence (risk_id, filename, content_type, size_bytes, data, dek, uploaded_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING id, filename, content_type as "contentType", size_bytes as "sizeBytes", created_at as "createdAt"`,
-      [riskId, e.filename, e.contentType, e.sizeBytes, e.data, e.uploadedBy]);
+      [riskId, e.filename, e.contentType, e.sizeBytes, data, dek, e.uploadedBy]);
     return rows[0];
   }
-  /** The raw blob for download (null if not found for this risk). */
+  /** The decrypted blob for download (null if not found for this risk). */
   async evidenceBlob(riskId: string, evidenceId: string) {
     const { rows } = await this.db.query(
-      `SELECT filename, content_type as "contentType", data FROM evidence WHERE risk_id=$1 AND id=$2`,
+      `SELECT filename, content_type as "contentType", data, dek FROM evidence WHERE risk_id=$1 AND id=$2`,
       [riskId, evidenceId]);
-    return rows[0] ?? null;
+    const row = rows[0];
+    if (!row) return null;
+    if (row.dek) {
+      const key = await getEncryptor().unwrapKey(row.dek);
+      row.data = aesDecrypt(key, row.data);
+    }
+    delete row.dek;
+    return row;
   }
   /** Returns true if a row was deleted. */
   async deleteEvidence(riskId: string, evidenceId: string) {

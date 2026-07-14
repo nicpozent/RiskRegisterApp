@@ -30,6 +30,11 @@ wait_for 30 "postgres" docker exec "$CONTAINER" pg_isready -U rr_test -d rr_test
 export ENTRA_TENANT_ID="${ENTRA_TENANT_ID:-test-tenant}"
 export ENTRA_API_AUDIENCE="${ENTRA_API_AUDIENCE:-api://test}"
 
+# Exercise at-rest encryption via the local provider (deterministic, no OpenBao
+# needed here). The OpenBao Transit path is covered by the dev compose stack.
+export DATA_ENCRYPTION_KEY="${DATA_ENCRYPTION_KEY:-$(head -c32 /dev/urandom | base64)}"
+export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(head -c32 /dev/urandom | base64)}"
+
 info "Applying migrations via the runner (also exercises npm run migrate)…"
 MIGRATIONS_DIR="$REPO_ROOT/db/migrations" npm run migrate -w @rr/api
 ok "schema ready"

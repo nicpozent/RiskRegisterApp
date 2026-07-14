@@ -51,13 +51,17 @@ Status legend: **✔ implemented** (evidence in the repo, CI-verified) ·
 | DR-1 | Backup & disaster recovery | ✔ | A.8.13, A.5.29/30 | RC.RP-01, PR.DS-11 | — |
 | PRV-1 | Data minimization | ✔ | A.8.10 | — | Art.5(1)(c) |
 | PRV-2 | Subject-rights & retention tooling | ✔ | — | — | Art.15/17/30/33, 5(1)(e) |
-| CRY-2 | Encryption at rest | ◻ | A.8.24 | — | Art.32 |
+| CRY-2 | Encryption at rest | ✔ | A.8.24 | — | Art.32 |
 | IAM-4 | MFA / Conditional Access | ✔ | A.8.5 | PR.AA-03 | — |
 
 `PRV-2` (subject-rights & retention tooling) is now implemented — DSAR export,
 append-only-preserving erasure and notification retention via the `privacy` CLI,
 backed by the GDPR artefacts in [`docs/gdpr/`](../gdpr/). `IAM-4` (MFA /
 Conditional Access) is now implemented at the identity provider (see
-[`identity-hardening.md`](../security/identity-hardening.md)). The one remaining
-planned control, `CRY-2` (encryption at rest), is a host/KMS action rather than
-application code.
+[`identity-hardening.md`](../security/identity-hardening.md)). `CRY-2`
+(encryption at rest) is now implemented in the application itself: envelope
+encryption of `risk.description` and evidence file contents via a pluggable
+`Encryptor` (OpenBao/Vault Transit or an injected local key), independent of
+host disk encryption — see
+[`encryption-at-rest.md`](../security/encryption-at-rest.md). Every catalogued
+control is now implemented.
