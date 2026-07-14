@@ -6,12 +6,40 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Encryption at rest (later round)
+
+- **Application-level encryption at rest**, independent of host/volume disk
+  encryption (BitLocker / cloud disk), closing the last planned control `CRY-2`
+  (**planned → implemented**; controls-as-code is now 22 controls, all
+  implemented). Protects DB files, snapshots and backups: the ciphertext is
+  useless without the key, which lives outside the database.
+- **Pluggable `Encryptor` seam** (`apps/api/src/infrastructure/crypto/encryptor.ts`):
+  - **`openbao-transit`** (`BAO_ADDR`/`BAO_TOKEN`/`BAO_TRANSIT_KEY`) — encrypt/
+    decrypt via OpenBao/Vault Transit; **the key never leaves the KMS**.
+  - **`local`** (`DATA_ENCRYPTION_KEY`) — AES-256-GCM with an injected secret.
+  - **noop** (nothing set) — passthrough, warned in production.
+  Ciphertext is scheme-prefixed (`l1:`/`b1:`); unknown/absent prefixes pass
+  through, so pre-existing plaintext rows and disabled mode keep working.
+- **What's encrypted:** `risk.description` (field encryption) and evidence file
+  contents (**envelope** — a per-file AES-256-GCM data key encrypts the bytes,
+  and only that 32-byte key is wrapped by the provider into the new
+  `evidence.dek` column, migration `0012`). The repository encrypts on write and
+  decrypts in the hydrate step, so the rest of the app only sees plaintext.
+- **OpenBao overlay** (`docker-compose.openbao.yml`) runs Transit as a container
+  for local dev/demo; production setup (Raft storage, real unseal, TLS, k8s
+  auth) is documented in
+  [`docs/security/encryption-at-rest.md`](security/encryption-at-rest.md).
+- **Tests:** unit round-trips for local/noop/wrap-unwrap/blind-index; the
+  integration suite runs with the local provider and asserts `risk.description`
+  and evidence blobs are ciphertext at rest and round-trip via the API.
+
 ## MFA + availability decision + evaluation refresh (later round)
 
 - **MFA / Conditional Access** documented (`docs/security/identity-hardening.md`)
   as enforced at Entra; control `IAM-4` flips **planned → implemented**
-  (controls-as-code now 22 controls, 21 implemented, 1 planned — only at-rest
-  encryption `CRY-2` remains).
+  (at the time of that round, 21 of 22 controls implemented — at-rest encryption
+  `CRY-2` was the last planned control, now also implemented, see the round
+  above).
 - **Availability/DR decision** captured as **ADR-0016**: single instance +
   managed-Postgres PITR/backups, **not** active-active HA (unwarranted for an
   internal tool); single-instance is now a documented, accepted decision rather

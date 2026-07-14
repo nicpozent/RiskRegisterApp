@@ -243,13 +243,13 @@
     {
       "id": "CRY-2",
       "title": "Encryption at rest",
-      "statement": "Host/volume disk encryption and customer-managed keys for the database and object storage.",
-      "status": "planned",
+      "statement": "Application-level envelope encryption of the most sensitive data (risk.description and evidence file contents) via a pluggable Encryptor seam, independent of host/volume disk encryption. Providers: OpenBao/Vault Transit (key never leaves the KMS) or an injected local AES-256-GCM key; disabled by default with clear passthrough.",
+      "status": "implemented",
       "frameworks": {
         "gdpr": ["Art.32"],
         "iso27001": ["A.8.24"]
       },
-      "evidence": []
+      "evidence": ["apps/api/src/infrastructure/crypto/encryptor.ts", "apps/api/src/infrastructure/risk.repository.ts", "docker-compose.openbao.yml", "docs/security/encryption-at-rest.md"]
     },
     {
       "id": "IAM-4",

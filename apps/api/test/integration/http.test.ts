@@ -330,6 +330,29 @@ describe.skipIf(!HAS_DB)('HTTP API (integration)', () => {
     expect(res.body).toEqual({ items: [], unread: 0 });
   });
 
+  const ENCRYPTED = !!process.env.DATA_ENCRYPTION_KEY || !!process.env.BAO_ADDR;
+
+  it.skipIf(!ENCRYPTED)('encrypts risk.description at rest (ciphertext in the column, plaintext via the API)', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin))
+      .send({ ...validBody, description: 'secret mitigation plan' }).expect(201);
+    const raw = await pool.query('SELECT description FROM risk WHERE id=$1', [created.body.id]);
+    expect(raw.rows[0].description).toMatch(/^l1:|^b1:/);      // scheme-prefixed ciphertext
+    expect(raw.rows[0].description).not.toContain('secret');
+    const view = await request(app).get(`/risks/${created.body.id}`).set('Authorization', bearer(viewer)).expect(200);
+    expect(view.body.description).toBe('secret mitigation plan'); // decrypted on read
+  });
+
+  it.skipIf(!ENCRYPTED)('envelope-encrypts evidence blobs at rest', async () => {
+    const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
+    const up = await request(app).post(`/risks/${created.body.id}/evidence`).set('Authorization', bearer(admin))
+      .send({ filename: 'p.txt', contentType: 'text/plain', dataBase64: Buffer.from('classified contents').toString('base64') }).expect(201);
+    const raw = await pool.query('SELECT data, dek FROM evidence WHERE id=$1', [up.body.id]);
+    expect(raw.rows[0].dek).toBeTruthy();                      // wrapped data key present
+    expect(raw.rows[0].data.toString('utf8')).not.toContain('classified');
+    const dl = await request(app).get(`/risks/${created.body.id}/evidence/${up.body.id}`).set('Authorization', bearer(viewer)).expect(200);
+    expect(dl.text).toBe('classified contents');               // decrypted on download
+  });
+
   it('rejects a non-integer If-Match (400)', async () => {
     const created = await request(app).post('/risks').set('Authorization', bearer(admin)).send(validBody).expect(201);
     await request(app).patch(`/risks/${created.body.id}`).set('Authorization', bearer(admin))

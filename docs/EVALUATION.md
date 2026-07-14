@@ -47,9 +47,9 @@ What a user actually does, mapped to the business capability it serves.
 | 3 | Frontend engineering | ★★★★★ | React 18 + Vite 5, TypeScript; hash router; real SVG charts; 13 component tests + Playwright browser e2e; accessible forms | — |
 | 4 | Identity & access | ★★★★★ | Entra SSO (MSAL, PKCE); JWKS RS256 pinned; roles from claims; JIT provisioning; MFA / Conditional Access enforced at Entra (`IAM-4`) | — |
 | 5 | Authorization model | ★★★★★ | Server-enforced RBAC (7 roles) + per-object ownership + maker-checker SoD; integration-tested, no IDOR | — |
-| 6 | Data & persistence | ★★★★★ | PostgreSQL 16; least-privilege role; append-only audit (trigger + revoked grants); migration runner (11); optimistic concurrency | — |
-| 7 | Security & hardening | ★★★★☆ | Helmet, CORS allowlist, rate limiting, 256 kb cap, parameterized SQL, Zod at every route, no committed secrets; CodeQL SAST + Trivy | At-rest encryption + DB-hop TLS host-dependent (`CRY-2`); no external pen-test |
-| 8 | Data protection / GDPR | ★★★★☆ | DSAR export + erasure + retention (privacy CLI); ROPA, DPIA, privacy notice, breach runbook; data minimization; append-only audit | Artefacts are drafts pending DPO sign-off; at-rest encryption host-dependent |
+| 6 | Data & persistence | ★★★★★ | PostgreSQL 16; least-privilege role; append-only audit (trigger + revoked grants); migration runner (12); optimistic concurrency | — |
+| 7 | Security & hardening | ★★★★☆ | Helmet, CORS allowlist, rate limiting, 256 kb cap, parameterized SQL, Zod at every route, no committed secrets; app-level at-rest encryption (`CRY-2`, OpenBao/local envelope); CodeQL SAST + Trivy | DB-hop TLS config-dependent (`DATABASE_SSL` off by default); no external pen-test |
+| 8 | Data protection / GDPR | ★★★★☆ | DSAR export + erasure + retention (privacy CLI); ROPA, DPIA, privacy notice, breach runbook; data minimization; append-only audit; app-level at-rest encryption of sensitive fields (`CRY-2`) | Artefacts are drafts pending DPO sign-off |
 | 9 | Compliance frameworks | ★★★★★ | 42-framework catalogue as product data + a 22-control controls-as-code self-assessment (ISO 27001 / NIST CSF / GDPR / OWASP ASVS) CI-gated; ISO 42001 / EU AI Act N/A | — |
 | 10 | Observability | ★★★★★ | Structured logs w/ request-id correlation + redaction; Prometheus `/metrics` (API + worker); DB-checked `/readyz`; opt-in OpenTelemetry tracing. SIEM wiring is a deployment step | — |
 | 11 | Testing | ★★★★★ | 100 tests — 22 API unit + 57 integration (real PG) + 6 worker + 13 web + 2 Playwright e2e; coverage-gated; compose smoke; autocannon benchmark. Authenticated browser e2e is environment-gated | — |
@@ -65,8 +65,8 @@ What a user actually does, mapped to the business capability it serves.
 
 | Priority | Item | Why |
 |----------|------|-----|
-| Medium | At-rest encryption + `DATABASE_SSL` | GDPR Art. 32 depends on host disk encryption / CMK and the DB-hop TLS flag — supported but off by default (`CRY-2`, the one remaining planned control) |
-| Medium | Managed-Postgres migration (PITR) | Minutes-level RPO; absorbs at-rest encryption, private networking and CD. Active-active HA deliberately out of scope (ADR-0016) |
+| Medium | `DATABASE_SSL` for the DB hop | At-rest encryption is now implemented in-app (`CRY-2`); the DB-hop TLS flag is supported but off by default and should be on against a TLS-terminating (managed) Postgres |
+| Medium | Managed-Postgres migration (PITR) | Minutes-level RPO; absorbs private networking and CD. Active-active HA deliberately out of scope (ADR-0016) |
 | Low | DPO sign-off on the GDPR artefacts | ROPA / DPIA / notice are drafted and the tooling is built; they need formal review and adoption |
 | Low | External penetration test | CodeQL + Trivy run in CI; an independent pen-test remains an organizational engagement |
 
