@@ -1,4 +1,5 @@
 import type { Queryable } from '../infrastructure/db.js';
+import { getEncryptor } from '@rr/crypto';
 
 // GDPR data-subject tooling. Pure functions over a Queryable so they can run
 // from the operational CLI or be exercised in integration tests.
@@ -12,7 +13,12 @@ async function resolve(db: Queryable, ref: SubjectRef): Promise<{ id: string; oi
     return rows[0] ?? null;
   }
   if (ref.email) {
-    const { rows } = await db.query('SELECT id, entra_oid AS oid FROM app_user WHERE lower(email) = lower($1)', [ref.email]);
+    // email is encrypted at rest; resolve via the keyed blind index. When
+    // encryption is disabled the index is null, so fall back to a plaintext match.
+    const bidx = getEncryptor().blindIndex(ref.email);
+    const { rows } = bidx
+      ? await db.query('SELECT id, entra_oid AS oid FROM app_user WHERE email_bidx = $1', [bidx])
+      : await db.query('SELECT id, entra_oid AS oid FROM app_user WHERE lower(email) = lower($1)', [ref.email]);
     return rows[0] ?? null;
   }
   return null;
@@ -33,9 +39,15 @@ export async function exportSubject(db: Queryable, ref: SubjectRef) {
     db.query('SELECT id, action, entity, entity_id, at FROM audit_event WHERE actor_oid = $1 ORDER BY id', [who.oid]),
     db.query('SELECT n.id, n.type, n.status, n.created_at FROM notification n JOIN risk r ON r.id = n.risk_id WHERE r.owner_id = $1 ORDER BY n.created_at', [who.id]),
   ]);
+  const enc = getEncryptor();
+  const u = user.rows[0];
+  if (u) {
+    u.display_name = await enc.decrypt(u.display_name);
+    if (u.email != null) u.email = await enc.decrypt(u.email);
+  }
   return {
     subject: ref,
-    user: user.rows[0],
+    user: u,
     ownedRisks: ownedRisks.rows,
     stakeholderRisks: stakeholderRisks.rows,
     auditEvents: auditEvents.rows,
@@ -60,6 +72,7 @@ export async function eraseSubject(db: Queryable, ref: SubjectRef): Promise<Eras
     `UPDATE app_user
         SET display_name = 'Erased subject',
             email = NULL,
+            email_bidx = NULL,
             erased_at = now()
       WHERE id = $1`, [who.id]);
   return { status: 'erased', oid: who.oid };

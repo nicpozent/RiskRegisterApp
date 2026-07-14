@@ -4,6 +4,7 @@ WORKDIR /repo
 # Manifests first for layer caching + reproducible install from the lockfile.
 COPY package.json package-lock.json ./
 COPY packages/frameworks-data/package.json packages/frameworks-data/
+COPY packages/crypto/package.json packages/crypto/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
@@ -11,8 +12,9 @@ COPY apps/worker/package.json apps/worker/
 # source is copied (it isn't present yet at install time).
 RUN npm ci --ignore-scripts
 COPY packages/frameworks-data packages/frameworks-data
+COPY packages/crypto packages/crypto
 COPY apps/api apps/api
-RUN npm run build -w @rr/frameworks-data && npm run build -w @rr/api
+RUN npm run build -w @rr/frameworks-data && npm run build -w @rr/crypto && npm run build -w @rr/api
 # Drop dev dependencies from the tree we copy into the runtime image.
 RUN npm prune --omit=dev
 

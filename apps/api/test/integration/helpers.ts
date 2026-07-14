@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { getEncryptor } from '@rr/crypto';
 
 export const HAS_DB = !!process.env.DATABASE_URL;
 
@@ -14,8 +15,11 @@ export async function resetDb() {
 }
 
 export async function seedUser(entraOid: string, email: string, name = 'Test User') {
+  // Mirror the app's write path: PII is encrypted at rest with a blind index on
+  // email (identity, no-op when encryption is disabled).
+  const enc = getEncryptor();
   const { rows } = await pool.query(
-    `INSERT INTO app_user (entra_oid, display_name, email) VALUES ($1,$2,$3) RETURNING id`,
-    [entraOid, name, email]);
+    `INSERT INTO app_user (entra_oid, display_name, email, email_bidx) VALUES ($1,$2,$3,$4) RETURNING id`,
+    [entraOid, await enc.encrypt(name), await enc.encrypt(email), enc.blindIndex(email)]);
   return rows[0].id as string;
 }

@@ -3,10 +3,29 @@ import { HAS_DB, pool, resetDb, seedUser } from './helpers.js';
 import { RiskRepository } from '../../src/infrastructure/risk.repository.js';
 import { exportSubject, eraseSubject, applyRetention } from '../../src/privacy/service.js';
 
+const ENCRYPTED = !!process.env.DATA_ENCRYPTION_KEY || !!process.env.BAO_ADDR;
+
 describe.skipIf(!HAS_DB)('privacy / GDPR tooling (integration)', () => {
   const repo = new RiskRepository(pool);
   afterAll(async () => { await pool.end(); });
   beforeEach(async () => { await resetDb(); });
+
+  it.skipIf(!ENCRYPTED)('stores app_user PII as ciphertext at rest but resolves + exports plaintext', async () => {
+    await seedUser('pii-oid', 'Person@B.com', 'Jane Doe');
+    // At rest: display_name/email are ciphertext, entra_oid stays clear.
+    const at = await pool.query(
+      `SELECT display_name, email, email_bidx, entra_oid FROM app_user WHERE entra_oid = 'pii-oid'`);
+    expect(at.rows[0].display_name).toMatch(/^l1:|^b1:/);
+    expect(at.rows[0].email).toMatch(/^l1:|^b1:/);
+    expect(at.rows[0].email_bidx).toBeTruthy();
+    expect(at.rows[0].entra_oid).toBe('pii-oid');
+    // Lookup by email works via the blind index (case/space-insensitive)…
+    const data = await exportSubject(pool, { email: '  person@b.com ' });
+    expect(data).not.toBeNull();
+    // …and the export returns decrypted values.
+    expect(data!.user.display_name).toBe('Jane Doe');
+    expect(data!.user.email).toBe('Person@B.com');
+  });
 
   it('exports a subject: user, owned risks and their audit events', async () => {
     const ownerId = await seedUser('subj-oid', 'subject@b.com', 'Subject User');

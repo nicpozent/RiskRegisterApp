@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../../infrastructure/db.js';
+import { getEncryptor } from '@rr/crypto';
 import { requireRole, Roles } from '../middleware/rbac.js';
 import { asyncHandler } from '../async-handler.js';
 
@@ -38,10 +39,20 @@ admin.get('/audit', requireRole(...AUDIT_ROLES), asyncHandler(async (req, res) =
   res.json(rows);
 }));
 
-// User directory (JIT-provisioned principals).
+// User directory (JIT-provisioned principals). display_name/email are encrypted
+// at rest, so decrypt for presentation and sort on the plaintext (ciphertext
+// ordering is meaningless). The directory is small — decrypting in the app is
+// cheap and keeps the key server-side.
 admin.get('/users', requireRole(...DIR_ROLES), asyncHandler(async (_req, res) => {
+  const enc = getEncryptor();
   const { rows } = await pool.query(
     `SELECT id, entra_oid as "entraOid", display_name as "displayName", email, created_at as "createdAt"
-       FROM app_user ORDER BY display_name`);
-  res.json(rows);
+       FROM app_user`);
+  const users = await Promise.all(rows.map(async (u) => ({
+    ...u,
+    displayName: await enc.decrypt(u.displayName),
+    email: u.email == null ? u.email : await enc.decrypt(u.email),
+  })));
+  users.sort((a, b) => String(a.displayName).localeCompare(String(b.displayName)));
+  res.json(users);
 }));
