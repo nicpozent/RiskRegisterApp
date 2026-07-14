@@ -81,6 +81,8 @@ push and PR.
 - [`scripts/diagnose/`](scripts/diagnose/README.md) — modular troubleshooting
   ("doctor") scripts that pinpoint the failing layer.
 - [`docs/REMEDIATION.md`](docs/REMEDIATION.md) — code-review findings and fixes.
+- [`docs/ops/production-readiness.md`](docs/ops/production-readiness.md) — go-live
+  checklist (enable encryption, DB TLS, Entra, PITR, and the DPIA-gated personnel module).
 
 ## Testing & troubleshooting
 
