@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { getEncryptor } from '@rr/crypto';
 import { HAS_DB, pool, resetDb, seedUser } from './helpers.js';
 import { RiskRepository } from '../../src/infrastructure/risk.repository.js';
 
@@ -66,8 +67,10 @@ describe.skipIf(!HAS_DB)('RiskRepository (integration)', () => {
     expect(id2).toBe(id1);
     const { rows } = await pool.query(`SELECT display_name, email FROM app_user WHERE entra_oid='u1'`);
     expect(rows).toHaveLength(1);
-    expect(rows[0].display_name).toBe('U One Renamed');
-    expect(rows[0].email).toBe('u1@b.com');   // preserved via COALESCE
+    // PII is encrypted at rest; decrypt to verify the upsert semantics.
+    const enc = getEncryptor();
+    expect(await enc.decrypt(rows[0].display_name)).toBe('U One Renamed');
+    expect(await enc.decrypt(rows[0].email)).toBe('u1@b.com');   // preserved via COALESCE
   });
 
   it('counts and paginates in ref order', async () => {

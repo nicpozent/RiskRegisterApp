@@ -39,8 +39,9 @@ info "Applying migrations via the runner (also exercises npm run migrate)…"
 MIGRATIONS_DIR="$REPO_ROOT/db/migrations" npm run migrate -w @rr/api
 ok "schema ready"
 
-info "Building shared package (needed by the HTTP suite's frameworks route)…"
+info "Building shared packages (frameworks route + the @rr/crypto encryption seam)…"
 npm run build -w @rr/frameworks-data >/dev/null
+npm run build -w @rr/crypto >/dev/null
 
 info "Running API integration suite…"
 # RR_VITEST_ARGS lets callers (e.g. regression.sh) pass extra vitest flags.

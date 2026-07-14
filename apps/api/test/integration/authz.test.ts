@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { getEncryptor } from '@rr/crypto';
 import { HAS_DB, pool, resetDb, seedUser } from './helpers.js';
 import { RiskRepository } from '../../src/infrastructure/risk.repository.js';
 import { RiskService } from '../../src/application/risk.service.js';
@@ -42,9 +43,10 @@ describe.skipIf(!HAS_DB)('object-level authorization (integration)', () => {
   it('JIT-provisions the acting principal into app_user on write', async () => {
     const view = await svc.create({ ...baseRisk },
       { oid: 'jit-oid', name: 'Jit User', email: 'jit@b.com', roles: [Roles.Contributor] });
-    const { rows } = await pool.query(`SELECT display_name, email FROM app_user WHERE entra_oid='jit-oid'`);
+    const { rows } = await pool.query(`SELECT email FROM app_user WHERE entra_oid='jit-oid'`);
     expect(rows).toHaveLength(1);
-    expect(rows[0].email).toBe('jit@b.com');
+    // email is encrypted at rest; it decrypts back to the provisioned address.
+    expect(await getEncryptor().decrypt(rows[0].email)).toBe('jit@b.com');
     expect(view.ref).toMatch(/^RR-/);
   });
 

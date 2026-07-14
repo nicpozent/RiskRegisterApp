@@ -1,0 +1,24 @@
+{
+  "name": "@rr/crypto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Application-level encryption seam (pluggable Encryptor: OpenBao/Vault Transit, local AES-256-GCM, or noop) shared by the API and worker.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.9"
+  }
+}

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { Risk } from '../domain/risk.js';
 import type { Queryable } from './db.js';
-import { getEncryptor, aesEncrypt, aesDecrypt } from './crypto/encryptor.js';
+import { getEncryptor, aesEncrypt, aesDecrypt } from '@rr/crypto';
 
 /** Raw grouped aggregates from the DB; the service maps scores → bands. */
 export interface RiskSummaryRaw {
@@ -168,15 +168,26 @@ export class RiskRepository {
    * Just-in-time provision the acting principal into app_user (upsert by
    * entra_oid). Keeps display_name fresh; only overwrites email when a new one
    * is present so a directory-synced address isn't clobbered by a null claim.
+   *
+   * display_name and email are directly-identifying PII: they are encrypted at
+   * rest via the active provider. Because the ciphertext can't be equality-
+   * matched, a keyed blind index of the (normalized) email is stored alongside
+   * for lookups. COALESCE preserves the prior email/index when the token carries
+   * no email claim.
    */
   async ensureUser(p: { oid: string; name?: string; email?: string }): Promise<string> {
+    const enc = getEncryptor();
+    const displayName = await enc.encrypt(p.name || p.oid);
+    const email = p.email ? await enc.encrypt(p.email) : null;
+    const emailBidx = p.email ? enc.blindIndex(p.email) : null;
     const { rows } = await this.db.query(
-      `INSERT INTO app_user (entra_oid, display_name, email) VALUES ($1,$2,$3)
+      `INSERT INTO app_user (entra_oid, display_name, email, email_bidx) VALUES ($1,$2,$3,$4)
          ON CONFLICT (entra_oid) DO UPDATE
            SET display_name = EXCLUDED.display_name,
-               email = COALESCE(EXCLUDED.email, app_user.email)
+               email = COALESCE(EXCLUDED.email, app_user.email),
+               email_bidx = COALESCE(EXCLUDED.email_bidx, app_user.email_bidx)
          RETURNING id`,
-      [p.oid, p.name || p.oid, p.email ?? null]);
+      [p.oid, displayName, email, emailBidx]);
     return rows[0].id;
   }
   // ---- Change requests (maker-checker) ----

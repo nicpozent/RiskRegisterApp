@@ -59,9 +59,10 @@ append-only-preserving erasure and notification retention via the `privacy` CLI,
 backed by the GDPR artefacts in [`docs/gdpr/`](../gdpr/). `IAM-4` (MFA /
 Conditional Access) is now implemented at the identity provider (see
 [`identity-hardening.md`](../security/identity-hardening.md)). `CRY-2`
-(encryption at rest) is now implemented in the application itself: envelope
-encryption of `risk.description` and evidence file contents via a pluggable
-`Encryptor` (OpenBao/Vault Transit or an injected local key), independent of
-host disk encryption — see
+(encryption at rest) is now implemented in the application itself: field/envelope
+encryption of `risk.description`, evidence file contents, and `app_user` PII
+(`display_name`/`email`, with a keyed blind index for email lookups) via a shared
+pluggable `Encryptor` (`@rr/crypto` — OpenBao/Vault Transit or an injected local
+key), independent of host disk encryption — see
 [`encryption-at-rest.md`](../security/encryption-at-rest.md). Every catalogued
 control is now implemented.

@@ -11,13 +11,14 @@ which lives outside the database.
 |------|-----|
 | `risk.description` (free text) | Field encryption via the active provider |
 | Evidence file contents (`evidence.data`) | **Envelope**: a per-file AES-256-GCM data key encrypts the bytes; only that 32-byte key is wrapped by the provider (`evidence.dek`) |
+| `app_user.display_name`, `app_user.email` (directly-identifying PII) | Field encryption. Email lookups use a keyed **blind index** (`app_user.email_bidx`, HMAC-SHA256 of the normalized address) since the ciphertext isn't equality-matchable |
 
 Identifiers, scores and references stay in clear so the register remains
-queryable. Extending encryption to `app_user` email/display-name (which needs a
-blind index plus decryption in the worker/admin/privacy read paths) is a tracked
-follow-up.
+queryable. `entra_oid` (a pseudonymous GUID) stays in clear so audit references
+and joins resolve. The encryption seam is a shared workspace package
+(`@rr/crypto`) used by both the API and the worker.
 
-## Providers (pluggable, opt-in) — `infrastructure/crypto/encryptor.ts`
+## Providers (pluggable, opt-in) — `packages/crypto/src/encryptor.ts`
 
 Selected by environment; if none is set, encryption is **disabled** (values pass
 through in clear, and a warning is logged in production).
@@ -35,10 +36,14 @@ the disabled mode keep working.
 
 ## How the app reads the data
 
-On a write, the repository encrypts the field (or wraps the blob's data key)
-before the SQL runs. On a read, it decrypts in the repository hydrate step, so
-the rest of the application only ever sees plaintext. With OpenBao the key never
-enters the app; with the local provider the key is held in memory only.
+On a write, the code encrypts the field (or wraps the blob's data key) before the
+SQL runs — in the risk repository, in JIT user provisioning (`ensureUser`), and
+in the test seed helper. On a read, it decrypts at the edge that needs plaintext:
+the repository hydrate step for risks, the admin user-directory route, the GDPR
+export, and the **worker** when resolving recipient addresses to send email. With
+OpenBao the key never enters the app; with the local provider the key is held in
+memory only. Because the seam lives in `@rr/crypto`, the API and worker share one
+implementation and one provider selection.
 
 ## Running it
 
@@ -62,6 +67,32 @@ enters the app; with the local provider the key is held in memory only.
    authenticates with its projected token — no static token distributed.
 5. Set `BAO_ADDR` (+ auth) on the API. Rotate the Transit key on a schedule;
    Transit re-wraps transparently.
+
+## Unseal (production)
+
+OpenBao/Vault boots **sealed**: its own storage is encrypted and the master key
+is not in memory, so Transit cannot encrypt or decrypt until the server is
+*unsealed*. This is deliberate — it's what stops a stolen storage volume from
+being useful. There are two ways to unseal:
+
+- **Auto-unseal (recommended)** — delegate the unseal to a cloud KMS / HSM
+  (Azure Key Vault, AWS KMS, GCP KMS, or a PKCS#11 HSM). On start the server asks
+  that KMS to decrypt its root key; no human and no key shares are involved, so a
+  pod or node restart recovers on its own.
+- **Shamir key shares** — `bao operator init` splits the unseal key into *n*
+  shares (threshold *k*); after any restart an operator must supply *k* shares.
+  Safe, but a restart wedges encryption until someone unseals by hand.
+
+Operational consequence: because the API/worker call Transit on every
+encrypt/decrypt, a **sealed** OpenBao makes those paths fail. Use auto-unseal so
+a restart doesn't require manual intervention, run OpenBao with **≥3 Raft nodes**
+so a single node bouncing doesn't seal the cluster, and alert on
+`bao status` → `sealed`.
+
+The **dev-mode overlay** (`docker-compose.openbao.yml`) side-steps all of this:
+`server -dev` starts already-unsealed with an in-memory backend and a throwaway
+root token. That's why it "just works" for local/demo — and exactly why it must
+not hold production data.
 
 ## Key-custody trade-off
 

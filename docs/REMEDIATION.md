@@ -6,6 +6,29 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Encryption at rest — user PII + shared crypto seam (later round)
+
+- **`app_user` PII encrypted at rest.** `display_name` and `email` are now
+  field-encrypted (migration `0013`); `entra_oid` (a pseudonymous GUID) stays in
+  clear so audit references and joins resolve. Because deterministic ciphertext
+  can't be equality-matched, email lookups (JIT upsert, DSAR resolve) use a keyed
+  **blind index** (`email_bidx`, HMAC-SHA256 of the normalized address).
+- **Shared `@rr/crypto` package.** The `Encryptor` seam moved out of the API into
+  a workspace package so the **worker** can use the same implementation and
+  provider selection. The worker decrypts recipient addresses before sending
+  email; the API decrypts in the risk hydrate step, the admin user directory, and
+  the GDPR export. Erasure clears the blind index alongside the email.
+- **Wiring:** worker `package.json`/Dockerfile depend on and build `@rr/crypto`
+  (with `packages/` copied into the runtime image so the workspace symlink
+  resolves); CI and `integration.sh` build it up front; the OpenBao compose
+  overlay now grants the worker Transit access too.
+- **Docs:** `encryption-at-rest.md` gains the `app_user` row and a dedicated
+  **Unseal (production)** section (auto-unseal vs Shamir shares, and why a sealed
+  OpenBao fails the encrypt/decrypt paths).
+- **Tests:** `@rr/crypto` unit suite (6); integration asserts `app_user` PII is
+  ciphertext at rest, resolves + exports plaintext via the blind index, and the
+  worker decrypts recipients before sending.
+
 ## Encryption at rest (later round)
 
 - **Application-level encryption at rest**, independent of host/volume disk

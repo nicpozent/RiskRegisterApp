@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { getEncryptor } from '@rr/crypto';
 import { sendMail } from './graph.js';
 
 const SUBJECTS: Record<string,string> = {
@@ -42,7 +43,9 @@ export async function processQueue(db: Pool): Promise<ProcessSummary> {
                   OR u.id IN (SELECT user_id FROM risk_stakeholder WHERE risk_id=$1))
              AND u.email IS NOT NULL`, [n.risk_id]);
       const { rows: r } = await db.query('SELECT ref, title FROM risk WHERE id=$1', [n.risk_id]);
-      const risk = r[0]; const to = people.map(p => p.email);
+      // Recipient addresses are encrypted at rest; decrypt before sending.
+      const enc = getEncryptor();
+      const risk = r[0]; const to = await Promise.all(people.map(p => enc.decrypt(p.email)));
       if (risk && to.length) {
         await sendMail({
           subject: `[${risk.ref}] ${SUBJECTS[n.type] ?? 'Risk update'}: ${risk.title}`,
