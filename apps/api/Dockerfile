@@ -1,5 +1,5 @@
 # ---- build ----
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /repo
 # Manifests first for layer caching + reproducible install from the lockfile.
 COPY package.json package-lock.json ./
