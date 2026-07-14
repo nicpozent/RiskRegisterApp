@@ -254,13 +254,13 @@
     {
       "id": "IAM-4",
       "title": "Multi-factor authentication / Conditional Access",
-      "statement": "MFA and Conditional Access enforced at the identity provider (Entra) for all users.",
-      "status": "planned",
+      "statement": "MFA and Conditional Access are enforced at the identity provider (Entra) for all users; the API trusts Entra's authentication decision and authorizes from token claims.",
+      "status": "implemented",
       "frameworks": {
         "iso27001": ["A.8.5"],
         "nistCsf": ["PR.AA-03"]
       },
-      "evidence": []
+      "evidence": ["docs/security/identity-hardening.md"]
     }
   ]
 }

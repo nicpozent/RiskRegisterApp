@@ -39,6 +39,7 @@ Status legend: **✔ implemented** (evidence in the repo, CI-verified) ·
 | AUD-1 | Append-only audit trail | ✔ | A.8.15 | DE.AE-03 | Art.30 |
 | AUD-2 | Least-privilege database role | ✔ | A.8.2, A.8.4 | PR.AA-05 | — |
 | INT-1 | Optimistic concurrency (integrity) | ✔ | A.8.26 | — | ASVS V11.1 |
+| SOD-1 | Segregation of duties (maker-checker) | ✔ | A.5.3, A.8.2 | PR.AA-05, GV.RR-02 | — |
 | APP-1 | Security headers, CORS, rate limiting | ✔ | A.8.9, A.8.23 | — | ASVS V14.4 |
 | LOG-1 | Structured logging + correlation + redaction | ✔ | A.8.15/16 | DE.AE-03 | — |
 | MON-1 | Monitoring, metrics and health checks | ✔ | A.8.16 | DE.CM-01 | — |
@@ -51,10 +52,12 @@ Status legend: **✔ implemented** (evidence in the repo, CI-verified) ·
 | PRV-1 | Data minimization | ✔ | A.8.10 | — | Art.5(1)(c) |
 | PRV-2 | Subject-rights & retention tooling | ✔ | — | — | Art.15/17/30/33, 5(1)(e) |
 | CRY-2 | Encryption at rest | ◻ | A.8.24 | — | Art.32 |
-| IAM-4 | MFA / Conditional Access | ◻ | A.8.5 | PR.AA-03 | — |
+| IAM-4 | MFA / Conditional Access | ✔ | A.8.5 | PR.AA-03 | — |
 
 `PRV-2` (subject-rights & retention tooling) is now implemented — DSAR export,
 append-only-preserving erasure and notification retention via the `privacy` CLI,
-backed by the GDPR artefacts in [`docs/gdpr/`](../gdpr/). The two remaining
-planned controls (`CRY-2` encryption at rest, `IAM-4` MFA / Conditional Access)
-are operator/host and identity-provider actions rather than application code.
+backed by the GDPR artefacts in [`docs/gdpr/`](../gdpr/). `IAM-4` (MFA /
+Conditional Access) is now implemented at the identity provider (see
+[`identity-hardening.md`](../security/identity-hardening.md)). The one remaining
+planned control, `CRY-2` (encryption at rest), is a host/KMS action rather than
+application code.

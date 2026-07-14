@@ -6,6 +6,20 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## MFA + availability decision + evaluation refresh (later round)
+
+- **MFA / Conditional Access** documented (`docs/security/identity-hardening.md`)
+  as enforced at Entra; control `IAM-4` flips **planned → implemented**
+  (controls-as-code now 22 controls, 21 implemented, 1 planned — only at-rest
+  encryption `CRY-2` remains).
+- **Availability/DR decision** captured as **ADR-0016**: single instance +
+  managed-Postgres PITR/backups, **not** active-active HA (unwarranted for an
+  internal tool); single-instance is now a documented, accepted decision rather
+  than an open gap.
+- **Evaluation refreshed** (`docs/EVALUATION.md` + the visual scorecard) to the
+  post-feature state: **overall 4.6/5**, 11/18 dimensions Excellent — Functional
+  coverage, Frontend, Observability and Testing all reach ★★★★★.
+
 ## In-app notification feed (later round)
 
 - **Per-user notification inbox** beyond the email outbox. New `user_notification`
