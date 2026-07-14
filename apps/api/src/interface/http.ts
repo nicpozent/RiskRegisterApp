@@ -13,6 +13,7 @@ import { frameworks } from './routes/frameworks.js';
 import { admin } from './routes/admin.js';
 import { reports } from './routes/reports.js';
 import { notifications } from './routes/notifications.js';
+import { personnel } from './routes/personnel.js';
 import { pool } from '../infrastructure/db.js';
 import { HttpError } from '../application/errors.js';
 
@@ -59,6 +60,9 @@ export function buildApp() {
   app.use('/admin', authenticate, admin);
   app.use('/reports', authenticate, reports);
   app.use('/notifications', authenticate, notifications);
+  // Personnel module (team SWOT + development plans) — sensitive PII, mounted
+  // only when explicitly enabled (DPIA-gated). Absent → these paths 404.
+  if (env.PERSONNEL_MODULE_ENABLED) app.use('/personnel', authenticate, personnel);
 
   app.use((_req, res) => res.status(404).json({ error: 'not found' }));
 

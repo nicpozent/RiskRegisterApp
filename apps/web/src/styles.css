@@ -141,3 +141,10 @@ nav a.active { color: var(--text); border-bottom: 2px solid var(--accent); }
 .barfill.High { background: var(--high); }
 .barfill.Critical { background: var(--critical); }
 .barval { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Personnel module (Teams / SWOT / development plans). */
+.col { display: flex; flex-direction: column; }
+.plain-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+.swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.swot-grid textarea, .col textarea, .col input, .col select { width: 100%; box-sizing: border-box; }
+@media (max-width: 720px) { .swot-grid { grid-template-columns: 1fr; } }

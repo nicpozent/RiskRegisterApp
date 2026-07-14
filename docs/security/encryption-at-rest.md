@@ -12,6 +12,7 @@ which lives outside the database.
 | `risk.description` (free text) | Field encryption via the active provider |
 | Evidence file contents (`evidence.data`) | **Envelope**: a per-file AES-256-GCM data key encrypts the bytes; only that 32-byte key is wrapped by the provider (`evidence.dek`) |
 | `app_user.display_name`, `app_user.email` (directly-identifying PII) | Field encryption. Email lookups use a keyed **blind index** (`app_user.email_bidx`, HMAC-SHA256 of the normalized address) since the ciphertext isn't equality-matchable |
+| Personnel module: `team_swot` quadrants + `development_plan.content` (sensitive personnel PII) | Field encryption. Feature-gated OFF by default (`PERSONNEL_MODULE_ENABLED`) until DPIA sign-off |
 
 Identifiers, scores and references stay in clear so the register remains
 queryable. `entra_oid` (a pseudonymous GUID) stays in clear so audit references

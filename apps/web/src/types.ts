@@ -90,6 +90,16 @@ export interface UserNotification {
   summary?: string; readAt?: string; createdAt: string;
 }
 
+// Personnel module (mirrors API /personnel). SWOT + development plans are
+// sensitive PII, encrypted at rest server-side; the SPA only ever sees plaintext.
+export interface Team { id: string; name: string; managerId: string | null; createdAt: string; }
+export interface TeamMember { userId: string; displayName: string; }
+export interface Swot { strengths: string; weaknesses: string; opportunities: string; threats: string; }
+export interface DevelopmentPlan { userId: string; content: string; updatedAt: string | null; }
+// Whether the (DPIA-gated) personnel module is surfaced in the SPA.
+export const PERSONNEL_ENABLED =
+  (import.meta.env.VITE_PERSONNEL_MODULE_ENABLED ?? 'false') === 'true';
+
 export const BANDS: Band[] = ['Low', 'Medium', 'High', 'Critical'];
 export const TREATMENTS: Treatment[] = ['Mitigate', 'Transfer', 'Avoid', 'Accept'];
 export const PATCH_STATUSES: Exclude<RiskStatus, 'accepted'>[] =

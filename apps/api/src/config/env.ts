@@ -10,6 +10,9 @@ const schema = z.object({
   CORS_ORIGIN: z.string().default('https://localhost'),
   ENTRA_TENANT_ID: z.string(),
   ENTRA_API_AUDIENCE: z.string(),
+  // Personnel module (team SWOT + development plans) is sensitive PII and is
+  // gated OFF by default until DPIA sign-off. Set to "true"/"1" to enable.
+  PERSONNEL_MODULE_ENABLED: z.string().default('false').transform(v => v === 'true' || v === '1'),
 });
 
 export const env = schema.parse(process.env);

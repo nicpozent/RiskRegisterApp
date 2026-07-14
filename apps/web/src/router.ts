@@ -8,6 +8,7 @@ export type Route =
   | { name: 'reports' }
   | { name: 'notifications' }
   | { name: 'admin' }
+  | { name: 'teams' }
   | { name: 'new' }
   | { name: 'risk'; id: string };
 
@@ -18,6 +19,7 @@ function parse(hash: string): Route {
   if (path === '/reports') return { name: 'reports' };
   if (path === '/notifications') return { name: 'notifications' };
   if (path === '/admin') return { name: 'admin' };
+  if (path === '/teams') return { name: 'teams' };
   if (path === '/new') return { name: 'new' };
   const m = path.match(/^\/risk\/([^/]+)$/);
   if (m) return { name: 'risk', id: decodeURIComponent(m[1]) };

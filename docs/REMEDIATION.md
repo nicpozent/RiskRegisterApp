@@ -6,6 +6,27 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Personnel module — team SWOT + development plans (later round)
+
+- **New feature:** teams (with a manager), team **SWOT** and individual
+  **development plans**. SWOT quadrants and dev-plan content are sensitive
+  personnel PII and are **encrypted at rest** via the shared `@rr/crypto` seam
+  (migration `0014`); team names/membership stay in clear so the directory is
+  queryable. Encrypt-on-write / decrypt-on-read lives in
+  `personnel.repository.ts`.
+- **Access model:** Admin/CISO manage teams and membership; a **manager** may
+  read/write the SWOT of teams they manage and the development plans of those
+  teams' members. Everyone else is denied. Enforced server-side
+  (`routes/personnel.ts`), integration-tested for both the manager and the
+  denied paths.
+- **DPIA-gated:** the module is **off by default** — the API mounts `/personnel`
+  only when `PERSONNEL_MODULE_ENABLED` is set, and the SPA hides the *Teams* view
+  behind `VITE_PERSONNEL_MODULE_ENABLED`, so it stays dormant until data-
+  protection sign-off.
+- **UI:** a *Teams* console (team list, SWOT editor, membership, per-member
+  development-plan editor). **Tests:** API integration (ciphertext at rest,
+  manager-vs-admin-vs-denied authz, unknown-team 404) + a web component test.
+
 ## Encryption at rest — user PII + shared crypto seam (later round)
 
 - **`app_user` PII encrypted at rest.** `display_name` and `email` are now
