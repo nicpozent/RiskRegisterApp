@@ -11,7 +11,8 @@ import { ControlLibrary } from './components/ControlLibrary.js';
 import { Admin } from './components/Admin.js';
 import { Reports } from './components/Reports.js';
 import { Notifications } from './components/Notifications.js';
-import { ADMIN_ROLES } from './types.js';
+import { Teams } from './components/Teams.js';
+import { ADMIN_ROLES, PERSONNEL_ENABLED } from './types.js';
 
 export default function App() {
   const { instance, accounts } = useMsal();
@@ -46,6 +47,7 @@ export default function App() {
               <a href="#/notifications" className={route.name === 'notifications' ? 'active' : ''}>
                 Notifications{unread > 0 && <span className="badge-count">{unread}</span>}
               </a>
+              {PERSONNEL_ENABLED && <a href="#/teams" className={route.name === 'teams' ? 'active' : ''}>Teams</a>}
               {isAdmin && <a href="#/admin" className={route.name === 'admin' ? 'active' : ''}>Admin</a>}
             </nav>
             <span className="who">{account?.name ?? account?.username}</span>
@@ -71,6 +73,7 @@ export default function App() {
           {route.name === 'reports' && <Reports />}
           {route.name === 'notifications' && <Notifications onChange={refreshUnread} />}
           {route.name === 'admin' && <Admin />}
+          {route.name === 'teams' && PERSONNEL_ENABLED && <Teams isAdmin={isAdmin} />}
           {route.name === 'new' && <NewRisk />}
           {route.name === 'risk' && <RiskDetail id={route.id} />}
         </AuthenticatedTemplate>

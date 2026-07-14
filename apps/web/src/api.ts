@@ -2,6 +2,7 @@ import { pca, loginRequest } from './authConfig.js';
 import type {
   RiskView, RiskInput, RiskSummary, FrameworkView, ControlView, TreatmentAction,
   AuditEvent, DirectoryUser, EvidenceMeta, ChangeRequest, UserNotification,
+  Team, TeamMember, Swot, DevelopmentPlan,
 } from './types.js';
 
 const BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -140,5 +141,37 @@ export const Controls = {
     p.set('offset', String(opts.offset ?? 0));
     const res = await request(`/controls?${p.toString()}`);
     return { items: await res.json(), total: Number(res.headers.get('X-Total-Count') ?? '0') };
+  },
+};
+
+// Personnel module (DPIA-gated server-side). SWOT + dev-plans are encrypted at
+// rest by the API; the SPA sends/receives plaintext over the authenticated call.
+export const Personnel = {
+  async teams(): Promise<Team[]> {
+    return (await request('/personnel/teams')).json();
+  },
+  async createTeam(name: string, managerId?: string | null): Promise<Team> {
+    return (await request('/personnel/teams', { method: 'POST', body: JSON.stringify({ name, managerId }) })).json();
+  },
+  async swot(teamId: string): Promise<Swot> {
+    return (await request(`/personnel/teams/${teamId}/swot`)).json();
+  },
+  async saveSwot(teamId: string, swot: Swot): Promise<Swot> {
+    return (await request(`/personnel/teams/${teamId}/swot`, { method: 'PUT', body: JSON.stringify(swot) })).json();
+  },
+  async members(teamId: string): Promise<TeamMember[]> {
+    return (await request(`/personnel/teams/${teamId}/members`)).json();
+  },
+  async addMember(teamId: string, userId: string): Promise<void> {
+    await request(`/personnel/teams/${teamId}/members`, { method: 'POST', body: JSON.stringify({ userId }) });
+  },
+  async removeMember(teamId: string, userId: string): Promise<void> {
+    await request(`/personnel/teams/${teamId}/members/${userId}`, { method: 'DELETE' });
+  },
+  async devPlan(userId: string): Promise<DevelopmentPlan> {
+    return (await request(`/personnel/users/${userId}/devplan`)).json();
+  },
+  async saveDevPlan(userId: string, content: string): Promise<DevelopmentPlan> {
+    return (await request(`/personnel/users/${userId}/devplan`, { method: 'PUT', body: JSON.stringify({ content }) })).json();
   },
 };

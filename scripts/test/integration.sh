@@ -35,6 +35,10 @@ export ENTRA_API_AUDIENCE="${ENTRA_API_AUDIENCE:-api://test}"
 export DATA_ENCRYPTION_KEY="${DATA_ENCRYPTION_KEY:-$(head -c32 /dev/urandom | base64)}"
 export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(head -c32 /dev/urandom | base64)}"
 
+# Enable the (DPIA-gated) personnel module so its HTTP routes mount and the
+# integration suite can exercise team SWOT / development-plan encryption + authz.
+export PERSONNEL_MODULE_ENABLED="${PERSONNEL_MODULE_ENABLED:-true}"
+
 info "Applying migrations via the runner (also exercises npm run migrate)…"
 MIGRATIONS_DIR="$REPO_ROOT/db/migrations" npm run migrate -w @rr/api
 ok "schema ready"
