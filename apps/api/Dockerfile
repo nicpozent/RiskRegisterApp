@@ -1,5 +1,5 @@
 # ---- build ----
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /repo
 # Manifests first for layer caching + reproducible install from the lockfile.
 COPY package.json package-lock.json ./
@@ -19,7 +19,7 @@ RUN npm run build -w @rr/frameworks-data && npm run build -w @rr/crypto && npm r
 RUN npm prune --omit=dev
 
 # ---- runtime (distroless, non-root) ----
-FROM gcr.io/distroless/nodejs20-debian12 AS runtime
+FROM gcr.io/distroless/nodejs22-debian12 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /repo/apps/api/dist ./dist

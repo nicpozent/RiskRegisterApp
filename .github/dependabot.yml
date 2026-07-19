@@ -18,16 +18,27 @@ updates:
     schedule:
       interval: weekly
 
-  # Base images in each Dockerfile
+  # Base images in each Dockerfile. The Node runtime major is pinned to the
+  # project's supported LTS (see engines / Dockerfiles) and moved deliberately,
+  # so ignore Node *major* bumps here — minor/patch base-image updates still flow.
   - package-ecosystem: docker
     directory: "/apps/api"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: "/apps/web"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: "/apps/worker"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
