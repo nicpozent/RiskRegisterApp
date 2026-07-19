@@ -20,7 +20,7 @@ jobs:
     name: install → lint → test → build → scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
@@ -72,7 +72,7 @@ jobs:
     needs: build          # only after the cheap checks pass
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
@@ -93,7 +93,7 @@ jobs:
     needs: build
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # smoke.sh brings the full stack up (db, api, worker, web, nginx),
       # generates a throwaway .env + dev TLS cert, and asserts the edge
@@ -107,7 +107,7 @@ jobs:
     needs: build          # only after the cheap checks pass
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "20"
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Gate: every manifest must be schema-valid. -ignore-missing-schemas lets
       # CRD-only fields (e.g. cert-manager annotations) pass; core kinds are
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Gate: no committed secrets. This is precise and should stay green.
       - name: Trivy secret scan (gating)
