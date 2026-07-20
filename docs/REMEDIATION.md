@@ -6,6 +6,19 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## Personnel module — subject-rights (DSAR/erasure) coverage (later round)
+
+- **Closes the follow-up from ADR-0017.** The GDPR `privacy` tooling now covers
+  the personnel module's PII: **DSAR export** (`exportSubject`) surfaces the
+  subject's **team memberships** and their **development plan** (decrypted for
+  the subject's copy); **erasure** (`eraseSubject`) **deletes** the development
+  plan and team-member rows outright — they have no records/legal-obligation
+  retention basis, unlike the app_user row + audit trail which are still
+  pseudonymised-and-retained. Team SWOT is team-level record data (not one
+  individual's personal data) and is out of scope for an individual erasure.
+- Covered by an integration test: seed a membership + dev plan → export shows
+  both (plaintext) → erase → both gone and a re-export is empty.
+
 ## Personnel module — team SWOT + development plans (later round)
 
 - **New feature:** teams (with a manager), team **SWOT** and individual

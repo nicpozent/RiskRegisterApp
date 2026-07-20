@@ -48,7 +48,7 @@ it, and enabling it is a **data-protection decision, not just a flag**.
 | ☐ | **Enable the API** | Set `PERSONNEL_MODULE_ENABLED=true` so `/personnel` mounts. |
 | ☐ | **Enable the SPA** | Set `VITE_PERSONNEL_MODULE_ENABLED=true` at build so the *Teams* view appears. Keep it in step with the API flag. |
 | ☐ | **Confirm access model** | Admin/CISO manage teams/membership; managers see only their teams' SWOT and their reports' development plans (ADR-0017). Verify manager assignments. |
-| ☐ | **Subject-rights coverage** | If personnel data is in scope for DSAR/erasure, extend the `privacy` tooling to cover `development_plan` / `team_swot` before go-live (tracked follow-up). |
+| ☐ | **Subject-rights coverage** | Done in code — DSAR export includes team memberships + the development plan, and erasure deletes both (team SWOT is team-level record data, out of scope for individual erasure). Confirm this matches your DPIA's scope decision. |
 
 To **disable** at any time: unset both flags. The schema is isolated (no coupling
 to the risk graph, no export path), so the module can be turned off — or dropped
