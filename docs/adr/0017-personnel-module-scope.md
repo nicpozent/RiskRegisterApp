@@ -56,9 +56,12 @@ default.** Specifically:
 - Operating this module in production is a **product + data-protection decision**,
   not just a config flag: a DPIA and a lawful basis for the personnel data are
   prerequisites, recorded in [`docs/ops/production-readiness.md`](../ops/production-readiness.md).
-- The privacy surface grows when enabled; DSAR/erasure tooling should be extended
-  to cover `development_plan` / `team_swot` before go-live if this data is in
-  scope for subject-rights requests (tracked as a follow-up).
+- The privacy surface grows when enabled, so the subject-rights tooling now
+  covers it: DSAR **export** includes the subject's team memberships and
+  (decrypted) development plan, and **erasure** deletes both outright (they have
+  no records/legal-obligation retention basis). Team SWOT is team-level record
+  data, not one individual's personal data, so it is out of scope for an
+  individual erasure.
 - If the organisation decides personnel management does not belong in the GRC
   tool, the module can be dropped with no impact on the risk register (isolated
   schema + gated mount) — this ADR would then be superseded.

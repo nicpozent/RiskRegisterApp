@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { HAS_DB, pool, resetDb, seedUser } from './helpers.js';
 import { RiskRepository } from '../../src/infrastructure/risk.repository.js';
+import { PersonnelRepository } from '../../src/infrastructure/personnel.repository.js';
 import { exportSubject, eraseSubject, applyRetention } from '../../src/privacy/service.js';
 
 const ENCRYPTED = !!process.env.DATA_ENCRYPTION_KEY || !!process.env.BAO_ADDR;
@@ -62,6 +63,30 @@ describe.skipIf(!HAS_DB)('privacy / GDPR tooling (integration)', () => {
     // Idempotent.
     expect((await eraseSubject(pool, { oid: 'erase-oid' })).status).toBe('already-erased');
     expect((await eraseSubject(pool, { oid: 'ghost' })).status).toBe('not-found');
+  });
+
+  it('DSAR export includes, and erasure deletes, personnel-module PII', async () => {
+    const repo = new PersonnelRepository(pool);
+    const subjectId = await seedUser('mem-oid', 'member@b.com', 'Team Member');
+    const team = await repo.createTeam('Alpha', null);
+    await repo.addMember(team.id, subjectId);
+    await repo.upsertDevelopmentPlan(subjectId, 'Grow into a tech lead', subjectId);
+
+    // Export surfaces the team membership + the (decrypted) development plan.
+    const data = await exportSubject(pool, { oid: 'mem-oid' });
+    expect(data!.teams).toEqual(['Alpha']);
+    expect(data!.developmentPlan?.content).toBe('Grow into a tech lead');
+
+    // Erasure deletes the dev plan and membership outright…
+    expect((await eraseSubject(pool, { oid: 'mem-oid' })).status).toBe('erased');
+    const dp = await pool.query('SELECT 1 FROM development_plan WHERE user_id = $1', [subjectId]);
+    const mem = await pool.query('SELECT 1 FROM team_member WHERE user_id = $1', [subjectId]);
+    expect(dp.rows).toHaveLength(0);
+    expect(mem.rows).toHaveLength(0);
+    // …and a subsequent export shows nothing left.
+    const after = await exportSubject(pool, { oid: 'mem-oid' });
+    expect(after!.teams).toEqual([]);
+    expect(after!.developmentPlan).toBeNull();
   });
 
   it('retention purges old terminal notifications but keeps recent/queued ones', async () => {
