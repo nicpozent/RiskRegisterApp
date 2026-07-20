@@ -6,11 +6,21 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Group only minor/patch bumps — those are safe to review and merge in bulk.
+    # Major bumps (Express 5, zod 4, the TS/vitest/vite/eslint toolchain, MSAL 5,
+    # ...) are deliberate, breaking migrations, so they are left OUT of the groups
+    # and arrive as individual PRs that can be assessed and landed one at a time.
     groups:
       production-dependencies:
         dependency-type: production
+        update-types:
+          - minor
+          - patch
       development-dependencies:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
 
   # GitHub Actions used by the CI workflow
   - package-ecosystem: github-actions
