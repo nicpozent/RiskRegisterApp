@@ -6,6 +6,22 @@ Severities follow the review; each item lists the finding, the fix, and the
 files touched. Framework references map to OWASP Top 10, NIST SSDF/800-53, and
 ISO/IEC 27001 Annex A.
 
+## React 19 upgrade — unblocks the Dependabot dependency groups (later round)
+
+- **React 18 → 19** (with `react-dom`, `@types/react`/`@types/react-dom` → 19)
+  plus **MSAL** to the React-19-compatible line (`@azure/msal-react` v2 → v3,
+  `@azure/msal-browser` v3 → v4). `main.tsx` already used `createRoot`, so no
+  render-API migration was needed; the app and tests build clean on 19.
+- **Root cause of the failing group PRs (#37/#47):** bumping React to 19 left
+  `@testing-library/react` auto-installing its own React **18** peer, so tests
+  rendered with react-dom 18 while components used react 19 → *"Objects are not
+  valid as a React child"* at reconcile. Fixed with a root **`overrides`** that
+  pins a single `react`/`react-dom` 19 across the whole tree; the lockfile was
+  regenerated so the override resolves consistently (single React, RTL deduped
+  onto it).
+- Verified: web build + 15 web tests, crypto/api unit, all workspace builds,
+  controls-as-code, and prod `npm audit` (high gate) all green.
+
 ## Personnel module — subject-rights (DSAR/erasure) coverage (later round)
 
 - **Closes the follow-up from ADR-0017.** The GDPR `privacy` tooling now covers

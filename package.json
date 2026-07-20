@@ -15,5 +15,10 @@
   "engines": {
     "node": ">=22"
   },
+  "//overrides": "Force a single React 19 across the tree — @testing-library/react otherwise auto-installs its own react/react-dom 18 peer, which mismatches the app's React 19 at reconcile time.",
+  "overrides": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
   "license": "UNLICENSED"
 }
