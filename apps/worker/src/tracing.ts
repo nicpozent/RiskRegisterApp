@@ -4,7 +4,7 @@
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
@@ -15,7 +15,7 @@ let provider: NodeTracerProvider | undefined;
 function start(serviceName: string) {
   if (!process.env.OTEL_EXPORTER_OTLP_ENDPOINT) return; // opt-in
   provider = new NodeTracerProvider({
-    resource: new Resource({ [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? serviceName }),
+    resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? serviceName }),
     spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
   });
   provider.register();
