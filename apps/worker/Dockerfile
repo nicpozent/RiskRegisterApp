@@ -21,12 +21,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /repo/apps/worker/dist ./dist
 COPY --from=build /repo/node_modules ./node_modules
-# npm may resolve some workspace deps (the OpenTelemetry 2.x tree) into the
-# workspace-local node_modules instead of hoisting them to the root. Node
-# resolves requires from dist/ against the workspace tree before the root, so
-# merge the workspace-nested @opentelemetry packages on top of the root copy
-# to keep the runtime image self-contained. The two sets are disjoint.
-COPY --from=build /repo/apps/worker/node_modules/@opentelemetry ./node_modules/@opentelemetry
+# npm may resolve workspace deps (e.g. the OpenTelemetry 2.x tree, or majors
+# like pino) into the workspace-local node_modules instead of hoisting them to
+# the root. Node resolves requires from dist/ against the workspace tree before
+# the root, so merge the whole workspace node_modules on top of the root copy
+# to keep the runtime image self-contained regardless of how npm hoists.
+# Workspace entries win on overlap, matching Node's resolution order; the
+# workspace tree carries no @rr symlinks, so the root ones survive.
+COPY --from=build /repo/apps/worker/node_modules/ ./node_modules/
 # Workspace deps (@rr/crypto) are symlinked from node_modules into packages/.
 COPY --from=build /repo/packages ./packages
 USER 10001
