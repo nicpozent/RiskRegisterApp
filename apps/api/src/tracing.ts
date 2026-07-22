@@ -29,7 +29,6 @@ function start(serviceName: string) {
   registerInstrumentations({
     instrumentations: [new HttpInstrumentation(), new ExpressInstrumentation(), new PgInstrumentation()],
   });
-  // eslint-disable-next-line no-console
   console.log(`OpenTelemetry tracing enabled → ${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}`);
 }
 
