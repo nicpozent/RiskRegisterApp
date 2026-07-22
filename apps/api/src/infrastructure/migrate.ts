@@ -40,7 +40,7 @@ async function main() {
       ran++;
     } catch (e) {
       await client.query('ROLLBACK');
-      throw new Error(`migration ${file} failed: ${e instanceof Error ? e.message : String(e)}`);
+      throw new Error(`migration ${file} failed: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
     } finally {
       client.release();
     }
