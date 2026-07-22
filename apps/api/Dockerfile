@@ -17,21 +17,22 @@ COPY apps/api apps/api
 RUN npm run build -w @rr/frameworks-data && npm run build -w @rr/crypto && npm run build -w @rr/api
 # Drop dev dependencies from the tree we copy into the runtime image.
 RUN npm prune --omit=dev
+# A clean install hoists every dependency to the root node_modules, but a
+# version conflict can make npm nest some into the workspace-local tree. Node
+# resolves requires from dist/ against the workspace tree first, so flatten any
+# such nested deps into the root tree — the runtime image ships only the root
+# node_modules, keeping it self-contained however npm hoists. No-op (and the
+# workspace dir may not exist) when everything is already hoisted.
+RUN cp -a apps/api/node_modules/. node_modules/ 2>/dev/null || true
 
 # ---- runtime (distroless, non-root) ----
 FROM gcr.io/distroless/nodejs22-debian12 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /repo/apps/api/dist ./dist
+# Root node_modules is self-contained: the build stage flattens any
+# workspace-nested deps into it before this copy.
 COPY --from=build /repo/node_modules ./node_modules
-# npm may resolve workspace deps (e.g. the OpenTelemetry 2.x tree, or majors
-# like helmet/jose/pino) into the workspace-local node_modules instead of
-# hoisting them to the root. Node resolves requires from dist/ against the
-# workspace tree before the root, so merge the whole workspace node_modules on
-# top of the root copy to keep the runtime image self-contained regardless of
-# how npm hoists. Workspace entries win on overlap, matching Node's resolution
-# order; the workspace tree carries no @rr symlinks, so the root ones survive.
-COPY --from=build /repo/apps/api/node_modules/ ./node_modules/
 COPY --from=build /repo/packages ./packages
 USER 10001
 EXPOSE 8080
